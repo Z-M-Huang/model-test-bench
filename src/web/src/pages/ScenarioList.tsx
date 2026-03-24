@@ -48,17 +48,8 @@ export function ScenarioList(): React.JSX.Element {
 
   return (
     <div className="bg-surface-container-low min-h-full -m-6 p-6">
-      {/* Toolbar / Breadcrumb */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-2 font-mono text-[10px] text-tertiary">
-          <span className="opacity-50">bench</span>
-          <span className="opacity-50">/</span>
-          <span className="opacity-50">workspace</span>
-          <span className="opacity-50">/</span>
-          <span className="text-on-surface font-medium px-2 py-0.5 bg-surface-container-highest rounded">
-            scenarios
-          </span>
-        </div>
+      {/* Toolbar */}
+      <div className="mb-8 flex items-center justify-end">
         <button
           onClick={() => navigate('/scenarios/new')}
           className="bg-gradient-to-br from-primary-container to-primary hover:opacity-90 text-on-primary-container font-semibold px-5 py-2 rounded-full text-xs flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary-container/20"

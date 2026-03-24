@@ -1,5 +1,4 @@
 import path from 'node:path';
-import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import type { IStorage, SetupFilter, ScenarioFilter, RunFilter, EvaluationFilter } from '../interfaces/storage.js';
 import type {
@@ -19,7 +18,6 @@ interface EntityConfig<T, F> {
 
 export class JsonFileStorage implements IStorage {
   private readonly basePath: string;
-  private readonly builtInScenariosDir: string | undefined;
   private readonly fs: FsAdapter;
   private initialized = false;
 
@@ -30,9 +28,8 @@ export class JsonFileStorage implements IStorage {
     evaluations: EntityConfig<Evaluation, EvaluationFilter>;
   };
 
-  constructor(basePath?: string, fsAdapter?: FsAdapter, builtInScenariosDir?: string) {
-    this.basePath = basePath ?? path.join(os.homedir(), '.claude-test-bench');
-    this.builtInScenariosDir = builtInScenariosDir;
+  constructor(basePath?: string, fsAdapter?: FsAdapter) {
+    this.basePath = basePath ?? path.join(process.cwd(), '.claude-test-bench');
     this.fs = fsAdapter ?? defaultFs;
 
     this.entities = {
@@ -185,84 +182,23 @@ export class JsonFileStorage implements IStorage {
     return this.deleteEntity(this.entities.setups.subdir, id);
   }
 
-  // ─── Built-in scenarios helpers ───────────────────────────────────
-
-  private builtInCache: Map<string, Scenario> | undefined;
-
-  private async ensureBuiltInCache(): Promise<Map<string, Scenario>> {
-    if (this.builtInCache) return this.builtInCache;
-    this.builtInCache = new Map();
-    if (!this.builtInScenariosDir) return this.builtInCache;
-    let files: string[];
-    try {
-      files = await this.fs.readdir(this.builtInScenariosDir);
-    } catch {
-      return this.builtInCache;
-    }
-    for (const file of files) {
-      if (!file.endsWith('.json')) continue;
-      try {
-        const raw = await this.fs.readFile(
-          path.join(this.builtInScenariosDir, file),
-          'utf-8',
-        );
-        const scenario = JSON.parse(raw) as Scenario;
-        this.builtInCache.set(scenario.id, scenario);
-      } catch {
-        // Skip corrupt files
-      }
-    }
-    return this.builtInCache;
-  }
-
-  private async getBuiltInScenario(id: string): Promise<Scenario | undefined> {
-    const cache = await this.ensureBuiltInCache();
-    return cache.get(id);
-  }
-
-  private async isBuiltInScenario(id: string): Promise<boolean> {
-    return (await this.getBuiltInScenario(id)) !== undefined;
-  }
-
   // ─── Scenarios ─────────────────────────────────────────────────────
 
-  async getScenario(id: string): Promise<Scenario | undefined> {
-    const builtIn = await this.getBuiltInScenario(id);
-    if (builtIn) return builtIn;
+  getScenario(id: string): Promise<Scenario | undefined> {
     return this.getEntity<Scenario>(this.entities.scenarios.subdir, id);
   }
 
-  async listScenarios(filter?: ScenarioFilter): Promise<readonly Scenario[]> {
+  listScenarios(filter?: ScenarioFilter): Promise<readonly Scenario[]> {
     const cfg = this.entities.scenarios;
-    const custom = await this.listEntities<Scenario, ScenarioFilter>(
-      cfg.subdir,
-      cfg.matchesFilter,
-      filter,
-    );
-    const cache = await this.ensureBuiltInCache();
-    const filteredBuiltIn = Array.from(cache.values()).filter((s) =>
-      cfg.matchesFilter(s, filter),
-    );
-
-    // Built-in IDs take precedence; exclude custom scenarios that shadow a built-in ID
-    const builtInIds = new Set(filteredBuiltIn.map((s) => s.id));
-    const deduped = custom.filter((s) => !builtInIds.has(s.id));
-
-    return [...filteredBuiltIn, ...deduped];
+    return this.listEntities<Scenario, ScenarioFilter>(cfg.subdir, cfg.matchesFilter, filter);
   }
 
-  async saveScenario(scenario: Scenario): Promise<void> {
-    if (await this.isBuiltInScenario(scenario.id)) {
-      throw new Error('Cannot modify a built-in scenario');
-    }
+  saveScenario(scenario: Scenario): Promise<void> {
     const cfg = this.entities.scenarios;
     return this.saveEntity(cfg.subdir, scenario, cfg.sensitive);
   }
 
-  async deleteScenario(id: string): Promise<boolean> {
-    if (await this.isBuiltInScenario(id)) {
-      throw new Error('Cannot delete a built-in scenario');
-    }
+  deleteScenario(id: string): Promise<boolean> {
     return this.deleteEntity(this.entities.scenarios.subdir, id);
   }
 

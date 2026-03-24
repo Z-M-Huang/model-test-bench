@@ -45,15 +45,6 @@ export function SetupList(): React.JSX.Element {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-[0.7rem] text-tertiary uppercase tracking-tighter">
-              Environment
-            </span>
-            <span className="text-on-surface-variant/30 text-xs">/</span>
-            <span className="font-mono text-[0.7rem] text-on-surface uppercase tracking-tighter">
-              Setups
-            </span>
-          </div>
           <h2 className="text-2xl font-bold tracking-tight text-on-surface">Test Setups</h2>
           <p className="text-xs text-on-surface-variant mt-1">
             Configure and manage your LLM provider integration parameters.
@@ -66,21 +57,6 @@ export function SetupList(): React.JSX.Element {
           <span className="material-symbols-outlined text-sm">add</span>
           New Setup
         </button>
-      </div>
-
-      {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 font-mono text-[0.65rem] text-on-surface-variant">
-        <span className="px-2 py-0.5 rounded bg-surface-container-low hover:bg-secondary-container/20 cursor-pointer transition-colors">
-          root
-        </span>
-        <span className="text-outline-variant">/</span>
-        <span className="px-2 py-0.5 rounded bg-surface-container-low hover:bg-secondary-container/20 cursor-pointer transition-colors">
-          configs
-        </span>
-        <span className="text-outline-variant">/</span>
-        <span className="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface">
-          setups_list.json
-        </span>
       </div>
 
       {/* Table */}

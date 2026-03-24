@@ -180,13 +180,6 @@ describe('Scenario routes', () => {
       expect(res.status).toBe(404);
     });
 
-    it('rejects update of built-in scenario', async () => {
-      vi.mocked(storage.getScenario).mockResolvedValue(makeScenario({ builtIn: true }));
-      const res = await request(app).put('/api/scenarios/scenario-1').send(VALID_BODY);
-      expect(res.status).toBe(403);
-      expect(res.body.error).toBe('Cannot modify a built-in scenario');
-    });
-
     it('validates body on update', async () => {
       vi.mocked(storage.getScenario).mockResolvedValue(makeScenario());
       const res = await request(app).put('/api/scenarios/scenario-1').send({ name: '' });
@@ -213,13 +206,6 @@ describe('Scenario routes', () => {
       vi.mocked(storage.getScenario).mockResolvedValue(undefined);
       const res = await request(app).delete('/api/scenarios/nonexistent');
       expect(res.status).toBe(404);
-    });
-
-    it('rejects deletion of built-in scenario', async () => {
-      vi.mocked(storage.getScenario).mockResolvedValue(makeScenario({ builtIn: true }));
-      const res = await request(app).delete('/api/scenarios/scenario-1');
-      expect(res.status).toBe(403);
-      expect(res.body.error).toBe('Cannot delete a built-in scenario');
     });
 
     it('returns 500 on storage failure', async () => {

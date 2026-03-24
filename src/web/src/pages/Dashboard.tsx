@@ -41,17 +41,6 @@ export function Dashboard(): React.JSX.Element {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 font-mono text-[0.7rem] text-tertiary">
-        <span className="opacity-50">root</span>
-        <span className="opacity-50">/</span>
-        <span className="px-1.5 py-0.5 rounded bg-secondary-container/20 text-on-secondary-container">
-          dashboard
-        </span>
-        <span className="opacity-50">/</span>
-        <span className="opacity-50">overview.log</span>
-      </div>
-
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">

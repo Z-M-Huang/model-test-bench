@@ -142,10 +142,6 @@ export function createScenarioRoutes(storage: IStorage, logger: ILogger): Router
         res.status(404).json({ error: 'Scenario not found' });
         return;
       }
-      if (existing.builtIn) {
-        res.status(403).json({ error: 'Cannot modify a built-in scenario' });
-        return;
-      }
       const errors = validateScenarioBody(req.body);
       if (errors.length > 0) {
         res.status(400).json({ errors });
@@ -185,10 +181,6 @@ export function createScenarioRoutes(storage: IStorage, logger: ILogger): Router
       const existing = await storage.getScenario(id);
       if (!existing) {
         res.status(404).json({ error: 'Scenario not found' });
-        return;
-      }
-      if (existing.builtIn) {
-        res.status(403).json({ error: 'Cannot delete a built-in scenario' });
         return;
       }
       await storage.deleteScenario(id);

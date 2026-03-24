@@ -1,0 +1,22 @@
+{
+  "id": "example-setup-001",
+  "name": "My Anthropic Setup",
+  "description": "Test setup using Claude Sonnet via Anthropic API",
+  "provider": {
+    "kind": "api",
+    "baseUrl": "https://api.anthropic.com",
+    "apiKey": "sk-ant-your-key-here",
+    "model": "claude-sonnet-4-6"
+  },
+  "claudeMdFiles": [
+    { "role": "project", "content": "# Project Rules\n\n- Always write tests\n- Never use any types" }
+  ],
+  "rules": [],
+  "skills": [],
+  "subagents": [],
+  "mcpServers": [],
+  "permissionMode": "acceptEdits",
+  "timeoutSeconds": 300,
+  "createdAt": "2026-03-24T00:00:00.000Z",
+  "updatedAt": "2026-03-24T00:00:00.000Z"
+}

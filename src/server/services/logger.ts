@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ILogger, LogLevel } from '../interfaces/logger.js';
+import { rotateIfNeeded, DEFAULT_ROTATION } from './log-rotator.js';
 
 const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   debug: 0,
@@ -18,15 +21,22 @@ export class JsonLogger implements ILogger {
   private readonly level: LogLevel;
   private readonly baseAttrs: Record<string, unknown>;
   private readonly writeFn: (line: string) => void;
+  private readonly logFilePath: string | undefined;
 
   constructor(
     level: LogLevel = 'info',
     baseAttrs: Record<string, unknown> = {},
     writeFn?: (line: string) => void,
+    logFilePath?: string,
   ) {
     this.level = level;
     this.baseAttrs = baseAttrs;
     this.writeFn = writeFn ?? ((line: string) => process.stderr.write(line + '\n'));
+    this.logFilePath = logFilePath;
+
+    if (logFilePath) {
+      fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+    }
   }
 
   debug(msg: string, attrs?: Record<string, unknown>): void {
@@ -46,7 +56,7 @@ export class JsonLogger implements ILogger {
   }
 
   child(attrs: Record<string, unknown>): ILogger {
-    return new JsonLogger(this.level, { ...this.baseAttrs, ...attrs }, this.writeFn);
+    return new JsonLogger(this.level, { ...this.baseAttrs, ...attrs }, this.writeFn, this.logFilePath);
   }
 
   private log(level: LogLevel, msg: string, attrs?: Record<string, unknown>): void {
@@ -62,6 +72,16 @@ export class JsonLogger implements ILogger {
       msg,
     };
 
-    this.writeFn(JSON.stringify(entry));
+    const line = JSON.stringify(entry);
+    this.writeFn(line);
+
+    if (this.logFilePath) {
+      try {
+        fs.appendFileSync(this.logFilePath, line + '\n');
+        rotateIfNeeded(this.logFilePath, DEFAULT_ROTATION);
+      } catch {
+        // Best-effort file logging — do not crash the process.
+      }
+    }
   }
 }

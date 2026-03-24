@@ -7,6 +7,7 @@ import type { LogLevel } from '../src/server/interfaces/logger.js';
 import { JsonLogger } from '../src/server/services/logger.js';
 import { JsonFileStorage } from '../src/server/services/storage.js';
 import { createApp } from '../src/server/index.js';
+import { seedIfEmpty } from '../src/server/services/seeder.js';
 
 // ─── .env loader (same approach as POC) ──────────────────────────────
 
@@ -71,18 +72,14 @@ async function main(): Promise<void> {
 
   const cliArgs = parseArgs(process.argv);
 
-  const logger = new JsonLogger(cliArgs.logLevel);
+  const basePath = path.join(process.cwd(), '.claude-test-bench');
+  const logFilePath = path.join(basePath, 'logs', 'ctb.log');
 
-  // Resolve the built-in scenarios directory relative to this file's location.
-  // In the compiled output (dist/bin/ctb.js), __dirname → <root>/dist/bin,
-  // so ../../scenarios points to <root>/scenarios.
-  const projectRoot = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname),
-    '..',
-    '..',
-  );
-  const builtInScenariosDir = path.join(projectRoot, 'scenarios');
-  const storage = new JsonFileStorage(undefined, undefined, builtInScenariosDir);
+  const logger = new JsonLogger(cliArgs.logLevel, {}, undefined, logFilePath);
+
+  const storage = new JsonFileStorage(basePath);
+
+  await seedIfEmpty(storage, logger);
 
   const app = createApp({ storage, logger });
   const server = http.createServer(app);
