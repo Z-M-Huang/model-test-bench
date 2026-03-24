@@ -80,13 +80,14 @@ export class EvaluationOrchestrator implements IEvaluator {
     const round1Evals = await this.runRound1(
       request.evaluators, accumulators, transcript, scenario, setup, instructions, summary,
     );
+    const round1Consensus = request.maxRounds <= 1 || checkConsensus(accumulators);
     const rounds: EvaluationRound[] = [{
       roundNumber: 1, evaluations: round1Evals,
-      consensusReached: request.maxRounds <= 1, timestamp: new Date().toISOString(),
+      consensusReached: round1Consensus, timestamp: new Date().toISOString(),
     }];
 
     // ── Multi-round debate ───────────────────────────────────────────
-    if (request.maxRounds > 1) {
+    if (request.maxRounds > 1 && !round1Consensus) {
       for (let roundNum = 2; roundNum <= request.maxRounds; roundNum++) {
         const debateEvals = await this.runDebateRound(request.evaluators, accumulators, roundNum);
         const consensus = checkConsensus(accumulators);
@@ -99,9 +100,11 @@ export class EvaluationOrchestrator implements IEvaluator {
     }
 
     // ── Synthesis ────────────────────────────────────────────────────
-    const allEvals = rounds.flatMap((r) => r.evaluations);
+    // Only pass the latest round's evaluations to avoid multi-vote bias
+    const latestRound = rounds[rounds.length - 1];
+    const latestEvals = latestRound.evaluations;
     const synthesizer = request.evaluators[request.evaluators.length - 1];
-    const synthResult = await this.runSynthesis(synthesizer, allEvals, scenario, setup, accumulators);
+    const synthResult = await this.runSynthesis(synthesizer, latestEvals, scenario, setup, accumulators);
 
     // ── Assemble final evaluation ────────────────────────────────────
     const ledger: EvaluatorLedger[] = accumulators.map((a) => ({
@@ -214,8 +217,14 @@ export class EvaluationOrchestrator implements IEvaluator {
       const record = msg as unknown as Record<string, unknown>;
       if (record['type'] === 'result') {
         const resultMsg = record as unknown as QueryResultMessage;
-        resultText = resultMsg.result ?? '';
         costUsd = resultMsg.total_cost_usd ?? 0;
+        if (resultMsg.subtype !== 'success') {
+          const errorDetail = resultMsg.result ?? 'unknown error';
+          throw new Error(
+            `SDK query failed (subtype: ${resultMsg.subtype}): ${errorDetail}`,
+          );
+        }
+        resultText = resultMsg.result ?? '';
       }
     }
 

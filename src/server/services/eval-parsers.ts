@@ -107,7 +107,9 @@ export function parseDebateResponse(response: string): Partial<DebateParseResult
       reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : undefined,
     };
   }
-  return { verdict: 'PARTIAL' };
+
+  // Fallback: extract verdict and scores from text patterns
+  return parseDebateFromText(response);
 }
 
 /** Convert score parse result into IndividualEvaluation entries. */
@@ -175,6 +177,29 @@ function parseComplianceFromText(text: string): Partial<ComplianceParseResult> {
   if (/followed|compliant/i.test(text)) followed.push('(extracted from text)');
   if (/violated|non-compliant/i.test(text)) violated.push('(extracted from text)');
   return { followed, violated, notApplicable: [], overallCompliance: undefined };
+}
+
+function parseDebateFromText(text: string): Partial<DebateParseResult> {
+  // Try to extract verdict from text patterns like "VERDICT: AGREE" or "VERDICT: DISAGREE: reason"
+  const verdictMatch = text.match(/VERDICT\s*:\s*(AGREE|DISAGREE|PARTIAL)/i);
+  const verdict = verdictMatch ? parseVerdict(verdictMatch[1]) : 'PARTIAL' as Verdict;
+
+  // Try to extract scores using the same pattern as score text fallback
+  const scores: Record<string, number> = {};
+  const scorePattern = /(\w[\w\s]*?):\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/g;
+  let match: RegExpExecArray | null;
+  while ((match = scorePattern.exec(text)) !== null) {
+    const dim = match[1].trim();
+    // Skip the VERDICT line we already parsed
+    if (/^verdict$/i.test(dim)) continue;
+    const val = parseFloat(match[2]);
+    if (!isNaN(val) && val <= 10) scores[dim] = val;
+  }
+
+  return {
+    verdict,
+    updatedScores: Object.keys(scores).length > 0 ? scores : undefined,
+  };
 }
 
 function parseSynthesisFromText(text: string): Partial<EvaluationSynthesis> {

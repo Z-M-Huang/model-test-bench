@@ -59,6 +59,7 @@ function splitIntoBlocks(content: string): string[] {
   const lines = content.split('\n');
   const blocks: string[] = [];
   let current: string[] = [];
+  let currentHeadingContext = '';
 
   for (const line of lines) {
     const isHeading = /^#{1,6}\s+/.test(line);
@@ -74,12 +75,22 @@ function splitIntoBlocks(content: string): string[] {
 
     if (!isBlankLine) {
       if (isHeading) {
-        // Headings become their own block only if they have content-like text
         const headingText = line.replace(/^#{1,6}\s+/, '').trim();
         if (headingText && !isOnlyFormatting(headingText)) {
-          blocks.push(headingText);
+          if (isActionableHeading(headingText)) {
+            // Actionable headings are testable instructions on their own
+            blocks.push(headingText);
+            currentHeadingContext = '';
+          } else {
+            // Non-actionable headings become context for child instructions
+            currentHeadingContext = headingText;
+          }
         }
       } else {
+        // Prepend heading context to child instructions for grouping
+        if (currentHeadingContext && current.length === 0) {
+          current.push(`[${currentHeadingContext}]`);
+        }
         current.push(line);
       }
     }
@@ -90,6 +101,23 @@ function splitIntoBlocks(content: string): string[] {
   }
 
   return blocks;
+}
+
+/**
+ * Check if heading text contains imperative/actionable language.
+ * A heading is actionable if it starts with a verb or contains directive keywords.
+ */
+function isActionableHeading(text: string): boolean {
+  const lower = text.toLowerCase();
+  // Contains directive keywords
+  if (/\b(must|should|always|never|do not|don't|ensure|require|avoid)\b/i.test(lower)) {
+    return true;
+  }
+  // Starts with an imperative verb (common instruction patterns)
+  if (/^(use|run|add|set|create|delete|remove|install|configure|enable|disable|check|verify|test|write|read|update|fix|apply|follow|include|exclude|import|export|call|return|throw|handle|log|format|lint|build|deploy|commit|push|pull|merge|rebase)\b/i.test(lower)) {
+    return true;
+  }
+  return false;
 }
 
 /** Clean up a raw block: strip list markers, collapse whitespace. */

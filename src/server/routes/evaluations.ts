@@ -212,7 +212,19 @@ export function createEvaluationRoutes(
         execute: async () => {
           const callbacks: EvaluationCallbacks = {
             onStatusChange(status: EvaluationStatus) {
+              const updatedEval: Evaluation = {
+                ...evaluation,
+                status,
+                updatedAt: new Date().toISOString(),
+              };
               broadcastSSE(evaluation.id, 'status', status, sseSubscribers);
+              storage.saveEvaluation(updatedEval).catch((saveErr) => {
+                logger.error('Failed to persist evaluation status change', {
+                  evalId: evaluation.id,
+                  status,
+                  error: String(saveErr),
+                });
+              });
             },
           };
 
@@ -226,6 +238,7 @@ export function createEvaluationRoutes(
             await storage.saveEvaluation(finalEval);
           } catch (err) {
             logger.error('Evaluation failed', { evalId: evaluation.id, error: String(err) });
+            broadcastSSE(evaluation.id, 'status', 'failed', sseSubscribers);
             const failedEval: Evaluation = {
               ...evaluation,
               status: 'failed',

@@ -26,10 +26,10 @@ export interface EvaluatorAccumulator {
 /** Check whether evaluator scores have converged (within 1 point per dimension). */
 export function checkConsensus(accumulators: readonly EvaluatorAccumulator[]): boolean {
   if (accumulators.length < 2) return true;
-  const allScores = accumulators
-    .map((a) => a.scoreResult.scores ?? {})
-    .filter((s) => Object.keys(s).length > 0);
-  if (allScores.length < 2) return true;
+  // Require ALL evaluators to have parsed scores before declaring consensus.
+  // If any evaluator's score result is missing, consensus is false.
+  const allScores = accumulators.map((a) => a.scoreResult.scores ?? {});
+  if (allScores.some((s) => Object.keys(s).length === 0)) return false;
 
   const dimensions = new Set(allScores.flatMap((s) => Object.keys(s)));
   for (const dim of dimensions) {
