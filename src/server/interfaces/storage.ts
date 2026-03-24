@@ -16,7 +16,6 @@ export interface SetupFilter {
 export interface ScenarioFilter {
   readonly category?: ScenarioCategory;
   readonly builtIn?: boolean;
-  readonly tags?: readonly string[];
 }
 
 export interface RunFilter {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method -- vi.fn() mocks don't have this-binding issues */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JsonFileStorage } from './storage.js';
 import { BASE_PROVIDER, createMockFs, makeSetup, makeScenario, makeRun, makeEvaluation } from './storage-test-helpers.js';

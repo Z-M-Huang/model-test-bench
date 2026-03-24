@@ -2,7 +2,7 @@
 // Evaluation Types
 // ---------------------------------------------------------------------------
 
-import type { ProviderConfig, ScoringDimension } from './setup.js';
+import type { ProviderConfig } from './setup.js';
 
 /** Configuration for an evaluator agent. */
 export interface EvaluatorConfig {
@@ -93,7 +93,7 @@ export interface EvaluationRound {
 
 /** Synthesised final scores across evaluators and rounds. */
 export interface EvaluationSynthesis {
-  readonly dimensionScores: ReadonlyMap<string, number>;
+  readonly dimensionScores: Readonly<Record<string, number>>;
   readonly weightedTotal: number;
   readonly confidence: number; // 0-1
   readonly dissenting: readonly string[];
@@ -103,7 +103,7 @@ export interface EvaluationSynthesis {
 export interface SetupEffectivenessReport {
   readonly setupId: string;
   readonly averageScore: number;
-  readonly scenarioBreakdown: ReadonlyMap<string, number>;
+  readonly scenarioBreakdown: Readonly<Record<string, number>>;
   readonly strengths: readonly string[];
   readonly weaknesses: readonly string[];
 }

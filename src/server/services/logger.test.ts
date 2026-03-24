@@ -13,7 +13,7 @@ describe('JsonLogger', () => {
   });
 
   function lastEntry(): Record<string, unknown> {
-    return JSON.parse(lines[lines.length - 1]);
+    return JSON.parse(lines[lines.length - 1]) as Record<string, unknown>;
   }
 
   // ─── Basic logging ───────────────────────────────────────────────
@@ -72,8 +72,8 @@ describe('JsonLogger', () => {
     logger.error('yes');
 
     expect(lines).toHaveLength(2);
-    expect(JSON.parse(lines[0]).level).toBe('WARN');
-    expect(JSON.parse(lines[1]).level).toBe('ERROR');
+    expect((JSON.parse(lines[0]) as Record<string, unknown>).level).toBe('WARN');
+    expect((JSON.parse(lines[1]) as Record<string, unknown>).level).toBe('ERROR');
   });
 
   it('filters out everything below error when level is error', () => {
@@ -161,7 +161,7 @@ describe('JsonLogger', () => {
 
     expect(lines).toHaveLength(4);
     for (const line of lines) {
-      expect(() => JSON.parse(line)).not.toThrow();
+      expect(() => JSON.parse(line) as unknown).not.toThrow();
     }
   });
 

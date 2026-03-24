@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "npm run build:server && npm run build:web",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json && tsc -p tsconfig.bin.json",
     "build:web": "vite build",
     "dev": "tsc -p tsconfig.server.json --watch",
     "test": "vitest run",

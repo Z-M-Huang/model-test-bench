@@ -2,7 +2,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import type { LogLevel } from '../src/server/interfaces/logger.js';
 import { JsonLogger } from '../src/server/services/logger.js';
@@ -67,11 +66,8 @@ function parseArgs(argv: string[]): CliArgs {
 // ─── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const projectRoot = path.resolve(__dirname, '..');
-
-  // Load .env from project root
-  loadEnvFile(path.join(projectRoot, '.env'));
+  // Load .env from the user's current working directory
+  loadEnvFile(path.join(process.cwd(), '.env'));
 
   const cliArgs = parseArgs(process.argv);
 

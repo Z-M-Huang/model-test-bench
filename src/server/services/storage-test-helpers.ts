@@ -93,7 +93,7 @@ export function makeEvaluation(overrides: Partial<Evaluation> = {}): Evaluation 
       subagentUsage: [],
     },
     synthesis: {
-      dimensionScores: new Map(),
+      dimensionScores: {},
       weightedTotal: 8,
       confidence: 0.9,
       dissenting: [],
@@ -120,23 +120,25 @@ export function createMockFs(): { fs: FsAdapter; state: MockFsState } {
   };
 
   const mockFs: FsAdapter = {
-    mkdir: vi.fn(async (dirPath: string) => {
-      state.dirs.add(dirPath);
+    mkdir: vi.fn((_dirPath: string) => {
+      state.dirs.add(_dirPath);
+      return Promise.resolve();
     }),
 
-    writeFile: vi.fn(async (filePath: string, data: string) => {
-      state.files.set(filePath, data);
+    writeFile: vi.fn((_filePath: string, data: string) => {
+      state.files.set(_filePath, data);
+      return Promise.resolve();
     }),
 
-    readFile: vi.fn(async (filePath: string) => {
+    readFile: vi.fn((filePath: string) => {
       const data = state.files.get(filePath);
       if (data === undefined) {
-        throw new Error(`ENOENT: no such file: ${filePath}`);
+        return Promise.reject(new Error(`ENOENT: no such file: ${filePath}`));
       }
-      return data;
+      return Promise.resolve(data);
     }),
 
-    readdir: vi.fn(async (dirPath: string) => {
+    readdir: vi.fn((dirPath: string) => {
       const prefix = dirPath.endsWith('/') ? dirPath : dirPath + '/';
       const entries: string[] = [];
       for (const key of state.files.keys()) {
@@ -147,36 +149,39 @@ export function createMockFs(): { fs: FsAdapter; state: MockFsState } {
           }
         }
       }
-      return entries;
+      return Promise.resolve(entries);
     }),
 
-    unlink: vi.fn(async (filePath: string) => {
+    unlink: vi.fn((filePath: string) => {
       if (!state.files.has(filePath)) {
-        throw new Error(`ENOENT: no such file: ${filePath}`);
+        return Promise.reject(new Error(`ENOENT: no such file: ${filePath}`));
       }
       state.files.delete(filePath);
+      return Promise.resolve();
     }),
 
-    rename: vi.fn(async (oldPath: string, newPath: string) => {
+    rename: vi.fn((oldPath: string, newPath: string) => {
       const data = state.files.get(oldPath);
       if (data === undefined) {
-        throw new Error(`ENOENT: no such file: ${oldPath}`);
+        return Promise.reject(new Error(`ENOENT: no such file: ${oldPath}`));
       }
       state.files.set(newPath, data);
       state.files.delete(oldPath);
+      return Promise.resolve();
     }),
 
-    stat: vi.fn(async (filePath: string) => {
+    stat: vi.fn((filePath: string) => {
       if (!state.files.has(filePath)) {
-        throw new Error(`ENOENT: no such file: ${filePath}`);
+        return Promise.reject(new Error(`ENOENT: no such file: ${filePath}`));
       }
-      return { isFile: () => true };
+      return Promise.resolve({ isFile: () => true });
     }),
 
-    access: vi.fn(async (filePath: string) => {
+    access: vi.fn((filePath: string) => {
       if (!state.files.has(filePath)) {
-        throw new Error(`ENOENT: no such file: ${filePath}`);
+        return Promise.reject(new Error(`ENOENT: no such file: ${filePath}`));
       }
+      return Promise.resolve();
     }),
   };
 

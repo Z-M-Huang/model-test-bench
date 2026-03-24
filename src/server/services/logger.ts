@@ -55,11 +55,11 @@ export class JsonLogger implements ILogger {
     }
 
     const entry: Record<string, unknown> = {
+      ...this.baseAttrs,
+      ...attrs,
       time: new Date().toISOString(),
       level: LOG_LEVEL_LABEL[level],
       msg,
-      ...this.baseAttrs,
-      ...attrs,
     };
 
     this.writeFn(JSON.stringify(entry));
