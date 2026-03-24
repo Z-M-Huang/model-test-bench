@@ -24,6 +24,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await res.text().catch(() => '');
     throw new Error(`API ${res.status}: ${res.statusText} – ${body}`);
   }
+  // 204 No Content has no body — return undefined instead of parsing JSON
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 

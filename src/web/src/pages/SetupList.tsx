@@ -123,8 +123,12 @@ export function SetupList(): React.JSX.Element {
               )}
               {setups.map((setup, i) => {
                 const ri = rowIcons[i % rowIcons.length];
-                const providerLabel =
-                  setup.provider.kind === 'api' ? 'Anthropic API' : 'Claude Code Auth';
+                // The list API returns summary fields (providerType, model) instead of the full provider object.
+                const extra = setup as unknown as Record<string, unknown>;
+                const providerKind = setup.provider?.kind ?? (extra.providerType as string) ?? 'api';
+                const providerModel = setup.provider?.model ?? (extra.model as string) ?? '';
+                const isApi = providerKind === 'api';
+                const providerLabel = isApi ? 'Anthropic API' : 'Claude Code Auth';
                 return (
                   <tr
                     key={setup.id}
@@ -152,7 +156,7 @@ export function SetupList(): React.JSX.Element {
                         <span className="text-[0.7rem] px-2 py-0.5 w-fit rounded-full bg-surface-container-high text-tertiary-fixed-dim border border-outline-variant/20 mb-1">
                           {providerLabel}
                         </span>
-                        {setup.provider.kind === 'api' && (
+                        {isApi && setup.provider?.kind === 'api' && (
                           <div className="text-[0.6rem] font-mono text-on-surface-variant flex flex-col">
                             <span>
                               URL:{' '}
@@ -165,7 +169,7 @@ export function SetupList(): React.JSX.Element {
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-[0.75rem] text-on-surface-variant">
-                        {setup.provider.model}
+                        {providerModel}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[0.75rem] text-on-surface-variant">

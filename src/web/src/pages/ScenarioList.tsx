@@ -123,7 +123,7 @@ export function ScenarioList(): React.JSX.Element {
                             Criteria
                           </span>
                           <span className="text-xs font-mono font-bold text-on-surface">
-                            {String(sc.criticalRequirements.length).padStart(2, '0')}
+                            {String((sc.criticalRequirements ?? []).length).padStart(2, '0')}
                           </span>
                         </div>
                         <div className="flex flex-col">
@@ -131,7 +131,7 @@ export function ScenarioList(): React.JSX.Element {
                             Scoring
                           </span>
                           <span className="text-xs font-mono font-bold text-on-surface">
-                            {String(sc.scoringDimensions.length).padStart(2, '0')}
+                            {String((sc.scoringDimensions ?? []).length).padStart(2, '0')}
                           </span>
                         </div>
                       </div>

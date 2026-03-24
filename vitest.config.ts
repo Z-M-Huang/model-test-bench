@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
+    exclude: ['e2e/**', 'dist/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       include: ['src/server/services/**/*.ts'],
