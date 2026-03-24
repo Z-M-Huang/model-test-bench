@@ -146,12 +146,24 @@ export function createRunRoutes(
               broadcastSSE(run.id, 'message', message, sseSubscribers);
             },
             onStatusChange(status: RunStatus) {
+              const updatedRun: Run = {
+                ...run,
+                status,
+                updatedAt: new Date().toISOString(),
+              };
               broadcastSSE(run.id, 'status', status, sseSubscribers);
+              storage.saveRun(updatedRun).catch((saveErr) => {
+                logger.error('Failed to persist status change', {
+                  runId: run.id,
+                  status,
+                  error: String(saveErr),
+                });
+              });
             },
           };
 
           try {
-            const result = await runner.executeRun(setup, scenario, run, callbacks);
+            const result = await runner.executeRun(setup, scenario, run, callbacks, abortController);
             await storage.saveRun(result);
           } catch (err) {
             logger.error('Run execution failed', {
@@ -269,6 +281,23 @@ export function createRunRoutes(
         res.status(404).json({ error: 'Run not found' });
         return;
       }
+
+      // If run is already terminal, send final status and close immediately
+      const terminalStatuses: RunStatus[] = ['completed', 'failed', 'cancelled'];
+      if (terminalStatuses.includes(run.status)) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+        });
+        res.flushHeaders();
+        res.write(`event: status\ndata: ${JSON.stringify(run.status)}\n\n`);
+        res.write('event: done\ndata: {}\n\n');
+        res.end();
+        return;
+      }
+
       handleSSEConnection(req, res, id, sseSubscribers);
     } catch (err) {
       logger.error('Failed to start SSE stream', { id: paramId(req), error: String(err) });

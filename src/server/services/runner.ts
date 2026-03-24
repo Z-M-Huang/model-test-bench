@@ -46,19 +46,22 @@ export class ScenarioRunner implements IRunner {
     scenario: Scenario,
     run: Run,
     callbacks: RunCallbacks,
+    externalAbortController?: AbortController,
   ): Promise<Run> {
     const startTime = Date.now();
     const messages: SDKMessageRecord[] = [];
-    const abortController = new AbortController();
+    const abortController = externalAbortController ?? new AbortController();
 
-    // Set up timeout
-    const timeoutMs = setup.timeoutSeconds * 1000;
-    const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
-
-    // Create workspace
-    const ws = await this.workspace.createWorkspace(setup, scenario);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let ws: { workspacePath: string; cleanup: () => Promise<void> } | undefined;
 
     try {
+      // Create workspace first — timeout starts only after workspace is ready
+      ws = await this.workspace.createWorkspace(setup, scenario);
+
+      // Set up timeout after workspace creation succeeds
+      const timeoutMs = setup.timeoutSeconds * 1000;
+      timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
       callbacks.onStatusChange('running');
 
       // Build SDK options
@@ -160,13 +163,15 @@ export class ScenarioRunner implements IRunner {
       callbacks.onStatusChange(errorRun.status);
       return errorRun;
     } finally {
-      clearTimeout(timeoutId);
-      await ws.cleanup().catch((cleanupErr) => {
-        this.logger.warn('Failed to clean up workspace', {
-          runId: run.id,
-          error: String(cleanupErr),
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      if (ws) {
+        await ws.cleanup().catch((cleanupErr) => {
+          this.logger.warn('Failed to clean up workspace', {
+            runId: run.id,
+            error: String(cleanupErr),
+          });
         });
-      });
+      }
     }
   }
 

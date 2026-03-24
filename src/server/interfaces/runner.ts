@@ -11,5 +11,6 @@ export interface IRunner {
     scenario: Scenario,
     run: Run,
     callbacks: RunCallbacks,
+    abortController?: AbortController,
   ): Promise<Run>;
 }

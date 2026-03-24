@@ -267,42 +267,14 @@ export class JsonFileStorage implements IStorage {
   }
 
   // ─── Runs ──────────────────────────────────────────────────────────
-
-  getRun(id: string): Promise<Run | undefined> {
-    return this.getEntity<Run>(this.entities.runs.subdir, id);
-  }
-
-  listRuns(filter?: RunFilter): Promise<readonly Run[]> {
-    const cfg = this.entities.runs;
-    return this.listEntities<Run, RunFilter>(cfg.subdir, cfg.matchesFilter, filter);
-  }
-
-  saveRun(run: Run): Promise<void> {
-    const cfg = this.entities.runs;
-    return this.saveEntity(cfg.subdir, run, cfg.sensitive);
-  }
-
-  deleteRun(id: string): Promise<boolean> {
-    return this.deleteEntity(this.entities.runs.subdir, id);
-  }
+  getRun(id: string): Promise<Run | undefined> { return this.getEntity(this.entities.runs.subdir, id); }
+  listRuns(filter?: RunFilter): Promise<readonly Run[]> { return this.listEntities(this.entities.runs.subdir, this.entities.runs.matchesFilter, filter); }
+  saveRun(run: Run): Promise<void> { return this.saveEntity(this.entities.runs.subdir, run, this.entities.runs.sensitive); }
+  deleteRun(id: string): Promise<boolean> { return this.deleteEntity(this.entities.runs.subdir, id); }
 
   // ─── Evaluations ───────────────────────────────────────────────────
-
-  getEvaluation(id: string): Promise<Evaluation | undefined> {
-    return this.getEntity<Evaluation>(this.entities.evaluations.subdir, id);
-  }
-
-  listEvaluations(filter?: EvaluationFilter): Promise<readonly Evaluation[]> {
-    const cfg = this.entities.evaluations;
-    return this.listEntities<Evaluation, EvaluationFilter>(cfg.subdir, cfg.matchesFilter, filter);
-  }
-
-  saveEvaluation(evaluation: Evaluation): Promise<void> {
-    const cfg = this.entities.evaluations;
-    return this.saveEntity(cfg.subdir, evaluation, cfg.sensitive);
-  }
-
-  deleteEvaluation(id: string): Promise<boolean> {
-    return this.deleteEntity(this.entities.evaluations.subdir, id);
-  }
+  getEvaluation(id: string): Promise<Evaluation | undefined> { return this.getEntity(this.entities.evaluations.subdir, id); }
+  listEvaluations(filter?: EvaluationFilter): Promise<readonly Evaluation[]> { return this.listEntities(this.entities.evaluations.subdir, this.entities.evaluations.matchesFilter, filter); }
+  saveEvaluation(evaluation: Evaluation): Promise<void> { return this.saveEntity(this.entities.evaluations.subdir, evaluation, this.entities.evaluations.sensitive); }
+  deleteEvaluation(id: string): Promise<boolean> { return this.deleteEntity(this.entities.evaluations.subdir, id); }
 }
