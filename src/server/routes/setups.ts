@@ -187,17 +187,23 @@ export function createSetupRoutes(storage: IStorage, logger: ILogger): Router {
       }
       const body = req.body as Record<string, unknown>;
       const updated: TestSetup = {
-        ...existing,
+        id: existing.id,
+        createdAt: existing.createdAt,
         name: (body.name as string).trim(),
-        description: (body.description as string | undefined) ?? existing.description,
+        description: (body.description as string | undefined) ?? '',
         provider: body.provider as ProviderConfig,
-        claudeMdFiles: Array.isArray(body.claudeMdFiles) ? body.claudeMdFiles : existing.claudeMdFiles,
-        rules: Array.isArray(body.rules) ? body.rules : existing.rules,
-        skills: Array.isArray(body.skills) ? body.skills : existing.skills,
-        subagents: Array.isArray(body.subagents) ? body.subagents : existing.subagents,
-        mcpServers: Array.isArray(body.mcpServers) ? body.mcpServers : existing.mcpServers,
-        permissionMode: (body.permissionMode as PermissionMode | undefined) ?? existing.permissionMode,
-        timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : existing.timeoutSeconds,
+        claudeMdFiles: Array.isArray(body.claudeMdFiles) ? body.claudeMdFiles : [],
+        rules: Array.isArray(body.rules) ? body.rules : [],
+        skills: Array.isArray(body.skills) ? body.skills : [],
+        subagents: Array.isArray(body.subagents) ? body.subagents : [],
+        mcpServers: Array.isArray(body.mcpServers) ? body.mcpServers : [],
+        permissionMode: (body.permissionMode as PermissionMode | undefined) ?? 'default',
+        maxTurns: typeof body.maxTurns === 'number' ? body.maxTurns : undefined,
+        maxBudgetUsd: typeof body.maxBudgetUsd === 'number' ? body.maxBudgetUsd : undefined,
+        timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : 300,
+        allowedTools: Array.isArray(body.allowedTools) ? body.allowedTools : undefined,
+        thinking: body.thinking as TestSetup['thinking'],
+        effort: body.effort as TestSetup['effort'],
         updatedAt: new Date().toISOString(),
       };
       await storage.saveSetup(updated);

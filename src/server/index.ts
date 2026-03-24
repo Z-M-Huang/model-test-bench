@@ -4,14 +4,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IStorage } from './interfaces/storage.js';
 import type { ILogger } from './interfaces/logger.js';
+import type { IRunner } from './interfaces/runner.js';
 import { createSetupRoutes } from './routes/setups.js';
 import { createScenarioRoutes } from './routes/scenarios.js';
+import { createRunRoutes } from './routes/runs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface AppDeps {
   storage: IStorage;
   logger: ILogger;
+  runner?: IRunner;
 }
 
 export function createApp(deps: AppDeps): express.Express {
@@ -41,6 +44,9 @@ export function createApp(deps: AppDeps): express.Express {
   // ─── API routes ──────────────────────────────────────────────────────
   app.use('/api/setups', createSetupRoutes(deps.storage, deps.logger));
   app.use('/api/scenarios', createScenarioRoutes(deps.storage, deps.logger));
+  if (deps.runner) {
+    app.use('/api/runs', createRunRoutes(deps.storage, deps.runner, deps.logger));
+  }
 
   // ─── Static files (production) ─────────────────────────────────────
   const webDistPath = path.resolve(__dirname, '..', 'web');
