@@ -4,3 +4,4 @@ coverage/
 .env
 *.tgz
 .claude-test-bench/
+test-results/

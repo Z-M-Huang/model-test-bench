@@ -28,6 +28,11 @@ export interface Run {
   readonly durationMs: number;
   readonly numTurns: number;
   readonly error?: string;
+  // Auto-evaluation config: reviewer setups selected at run creation time
+  readonly reviewerSetupIds?: readonly string[];
+  readonly reviewerSetupSnapshots?: readonly TestSetup[];
+  readonly maxEvalRounds?: number;
+  readonly evaluationId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

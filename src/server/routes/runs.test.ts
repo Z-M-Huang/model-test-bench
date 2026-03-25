@@ -55,7 +55,7 @@ function createApp(
 ): express.Express {
   const app = express();
   app.use(express.json());
-  app.use('/api/runs', createRunRoutes(storage, runner, logger, queue));
+  app.use('/api/runs', createRunRoutes(storage, runner, logger, undefined, queue));
   return app;
 }
 

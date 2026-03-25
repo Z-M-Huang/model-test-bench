@@ -106,6 +106,10 @@ export interface Run {
   readonly durationMs: number;
   readonly numTurns: number;
   readonly error?: string;
+  readonly reviewerSetupIds?: readonly string[];
+  readonly reviewerSetupSnapshots?: readonly TestSetup[];
+  readonly maxEvalRounds?: number;
+  readonly evaluationId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

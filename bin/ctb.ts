@@ -6,6 +6,9 @@ import http from 'node:http';
 import type { LogLevel } from '../src/server/interfaces/logger.js';
 import { JsonLogger } from '../src/server/services/logger.js';
 import { JsonFileStorage } from '../src/server/services/storage.js';
+import { WorkspaceBuilder } from '../src/server/services/workspace.js';
+import { ScenarioRunner } from '../src/server/services/runner.js';
+import { EvaluationOrchestrator } from '../src/server/services/evaluator.js';
 import { createApp } from '../src/server/index.js';
 import { seedIfEmpty } from '../src/server/services/seeder.js';
 
@@ -81,7 +84,11 @@ async function main(): Promise<void> {
 
   await seedIfEmpty(storage, logger);
 
-  const app = createApp({ storage, logger });
+  const workspace = new WorkspaceBuilder();
+  const runner = new ScenarioRunner(workspace, logger);
+  const evaluator = new EvaluationOrchestrator();
+
+  const app = createApp({ storage, logger, runner, evaluator });
   const server = http.createServer(app);
 
   const url = `http://localhost:${cliArgs.port}`;

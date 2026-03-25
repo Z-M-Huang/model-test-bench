@@ -8,9 +8,11 @@ import type { Request, Response } from 'express';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
 import type { IRunner, RunCallbacks } from '../interfaces/runner.js';
-import type { Run, RunStatus } from '../types/index.js';
+import type { IEvaluator, EvaluationCallbacks } from '../interfaces/evaluator.js';
+import type { Run, RunStatus, TestSetup, Evaluation, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
 import { handleSSEConnection, broadcastSSE, closeSSE } from './run-sse.js';
 import type { SSESubscriberMap } from './run-sse.js';
+import { EvalQueue } from './eval-queue.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,6 +27,16 @@ function paramId(req: Request): string {
 function runSummary(run: Run): Omit<Run, 'messages'> & { messages?: undefined } {
   const { messages: _messages, ...rest } = run;
   return rest;
+}
+
+/** Build EvaluatorConfig[] from reviewer setup snapshots. N-1 as Evaluators, last as Synthesizer. */
+function buildEvaluatorConfigs(reviewerSnapshots: readonly TestSetup[]): EvaluatorConfig[] {
+  return reviewerSnapshots.map((setup, idx) => ({
+    provider: setup.provider,
+    role: idx < reviewerSnapshots.length - 1
+      ? (reviewerSnapshots.length > 2 ? `Evaluator ${idx + 1}` : 'Evaluator')
+      : 'Synthesizer',
+  }));
 }
 
 // Import and re-export RunQueue from extracted module
@@ -45,11 +57,14 @@ export function createRunRoutes(
   storage: IStorage,
   runner: IRunner,
   logger: ILogger,
+  evaluator?: IEvaluator,
   queue?: RunQueue,
 ): Router {
   const router = Router();
   const runQueue = queue ?? new RunQueue(1);
   const sseSubscribers: SSESubscriberMap = new Map();
+
+  const evalQueue = new EvalQueue(1);
 
   // POST / — start a new run
   router.post('/', async (req: Request, res: Response) => {
@@ -75,6 +90,32 @@ export function createRunRoutes(
         return;
       }
 
+      // Optional reviewer setups for auto-evaluation
+      const rawReviewerIds = body.reviewerSetupIds;
+      let reviewerSetupIds: string[] | undefined;
+      let reviewerSetupSnapshots: TestSetup[] | undefined;
+      if (Array.isArray(rawReviewerIds) && rawReviewerIds.length > 0) {
+        reviewerSetupIds = [];
+        reviewerSetupSnapshots = [];
+        for (const rid of rawReviewerIds) {
+          if (typeof rid !== 'string') {
+            res.status(400).json({ error: 'reviewerSetupIds must be an array of strings' });
+            return;
+          }
+          const reviewerSetup = await storage.getSetup(rid);
+          if (!reviewerSetup) {
+            res.status(404).json({ error: `Reviewer setup not found: ${rid}` });
+            return;
+          }
+          reviewerSetupIds.push(rid);
+          reviewerSetupSnapshots.push(reviewerSetup);
+        }
+      }
+
+      const maxEvalRounds = typeof body.maxEvalRounds === 'number'
+        ? Math.min(5, Math.max(1, body.maxEvalRounds))
+        : undefined;
+
       const now = new Date().toISOString();
       const run: Run = {
         id: uuidv4(),
@@ -88,6 +129,9 @@ export function createRunRoutes(
         totalCostUsd: 0,
         durationMs: 0,
         numTurns: 0,
+        reviewerSetupIds,
+        reviewerSetupSnapshots,
+        maxEvalRounds,
         createdAt: now,
         updatedAt: now,
       };
@@ -125,6 +169,106 @@ export function createRunRoutes(
           try {
             const result = await runner.executeRun(setup, scenario, run, callbacks, abortController);
             await storage.saveRun(result);
+
+            // Auto-trigger evaluation if reviewer setups were configured
+            if (result.status === 'completed' && evaluator && reviewerSetupSnapshots && reviewerSetupSnapshots.length > 0) {
+              try {
+                const evaluatorConfigs = buildEvaluatorConfigs(reviewerSetupSnapshots);
+                const evalRequest: EvaluationRequest = {
+                  runId: result.id,
+                  evaluators: evaluatorConfigs,
+                  maxRounds: maxEvalRounds ?? 1,
+                };
+
+                const evalNow = new Date().toISOString();
+                const evaluation: Evaluation = {
+                  id: uuidv4(),
+                  runId: result.id,
+                  status: 'pending',
+                  evaluators: evaluatorConfigs,
+                  rounds: [],
+                  answerComparison: { matches: false, explanation: '', similarity: 0 },
+                  criticalResults: [],
+                  setupCompliance: {
+                    instructionCompliance: { followed: [], violated: [], notApplicable: [], overallCompliance: 0 },
+                    skillUsage: [],
+                    subagentUsage: [],
+                  },
+                  synthesis: { dimensionScores: {}, weightedTotal: 0, confidence: 0, dissenting: [] },
+                  ledger: [],
+                  totalCostUsd: 0,
+                  createdAt: evalNow,
+                  updatedAt: evalNow,
+                };
+
+                await storage.saveEvaluation(evaluation);
+
+                // Link evaluation to the run
+                const linkedRun: Run = {
+                  ...result,
+                  evaluationId: evaluation.id,
+                  updatedAt: new Date().toISOString(),
+                };
+                await storage.saveRun(linkedRun);
+
+                // Broadcast the evaluation ID to SSE subscribers
+                broadcastSSE(run.id, 'evaluation', { evaluationId: evaluation.id }, sseSubscribers);
+
+                // Enqueue evaluation execution
+                evalQueue.enqueue({
+                  evaluation,
+                  execute: async () => {
+                    const evalCallbacks: EvaluationCallbacks = {
+                      onStatusChange(evalStatus: EvaluationStatus) {
+                        broadcastSSE(run.id, 'evalStatus', evalStatus, sseSubscribers);
+                        const updatedEval: Evaluation = {
+                          ...evaluation,
+                          status: evalStatus,
+                          updatedAt: new Date().toISOString(),
+                        };
+                        storage.saveEvaluation(updatedEval).catch((saveErr) => {
+                          logger.error('Failed to persist eval status', {
+                            evalId: evaluation.id,
+                            error: String(saveErr),
+                          });
+                        });
+                      },
+                    };
+
+                    try {
+                      const evalResult = await evaluator.evaluateRun(
+                        linkedRun, scenario, setup, evalRequest, evalCallbacks,
+                      );
+                      const finalEval: Evaluation = {
+                        ...evalResult,
+                        id: evaluation.id,
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await storage.saveEvaluation(finalEval);
+                      broadcastSSE(run.id, 'evalComplete', { evaluationId: evaluation.id }, sseSubscribers);
+                    } catch (evalErr) {
+                      logger.error('Auto-evaluation failed', {
+                        runId: run.id,
+                        evalId: evaluation.id,
+                        error: String(evalErr),
+                      });
+                      const failedEval: Evaluation = {
+                        ...evaluation,
+                        status: 'failed',
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await storage.saveEvaluation(failedEval).catch(() => {});
+                    }
+                  },
+                });
+              } catch (evalSetupErr) {
+                logger.error('Failed to set up auto-evaluation', {
+                  runId: run.id,
+                  error: String(evalSetupErr),
+                });
+                // Run itself succeeded — don't fail it because eval setup failed
+              }
+            }
           } catch (err) {
             logger.error('Run execution failed', {
               runId: run.id,
@@ -144,7 +288,10 @@ export function createRunRoutes(
             });
           } finally {
             abortControllers.delete(run.id);
-            closeSSE(run.id, sseSubscribers);
+            // Don't close SSE yet if evaluation is running — it will close when eval completes
+            if (!reviewerSetupSnapshots || reviewerSetupSnapshots.length === 0) {
+              closeSSE(run.id, sseSubscribers);
+            }
           }
         },
       });

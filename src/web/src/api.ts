@@ -95,7 +95,7 @@ export const api = {
     get: (id: string) => get<Run>(`/api/runs/${id}`),
     getSummary: (id: string) =>
       get<{ run: Run; evaluation?: Evaluation }>(`/api/runs/${id}/summary`),
-    create: (body: { setupId: string; scenarioId: string }) =>
+    create: (body: { setupId: string; scenarioId: string; reviewerSetupIds?: string[]; maxEvalRounds?: number }) =>
       post<Run>('/api/runs', body),
     delete: (id: string) => del(`/api/runs/${id}`),
   },

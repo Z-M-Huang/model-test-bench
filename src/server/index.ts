@@ -49,7 +49,7 @@ export function createApp(deps: AppDeps): express.Express {
   app.use('/api/setups', createSetupRoutes(deps.storage, deps.logger));
   app.use('/api/scenarios', createScenarioRoutes(deps.storage, deps.logger));
   if (deps.runner) {
-    app.use('/api/runs', createRunRoutes(deps.storage, deps.runner, deps.logger));
+    app.use('/api/runs', createRunRoutes(deps.storage, deps.runner, deps.logger, deps.evaluator));
   }
   if (deps.evaluator) {
     app.use('/api/evaluations', createEvaluationRoutes(deps.storage, deps.evaluator, deps.logger));

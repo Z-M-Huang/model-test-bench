@@ -50,7 +50,7 @@ export function handleSSEConnection(
 export function broadcastSSE(
   runId: string,
   event: string,
-  data: SDKMessageRecord | string,
+  data: SDKMessageRecord | Record<string, unknown> | string,
   subscribers: SSESubscriberMap,
 ): void {
   const subs = subscribers.get(runId);

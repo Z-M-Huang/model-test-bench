@@ -35,7 +35,7 @@ export function RunStatusBar({ runId, status, elapsedMs, turns, costUsd, onAbort
         </span>
         <span className="text-on-surface-variant flex items-center gap-1">
           <span className="material-symbols-outlined" style={{ fontSize: '0.9rem' }}>payments</span>
-          ${costUsd.toFixed(4)}
+          ${(costUsd ?? 0).toFixed(4)}
         </span>
       </div>
 
