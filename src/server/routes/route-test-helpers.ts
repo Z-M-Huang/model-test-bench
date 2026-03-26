@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { TestSetup, Scenario } from '../types/index.js';
+import type { Provider, Scenario } from '../types/index.js';
 
 // NOTE: These are not real keys — they are test-only fixtures.
 export const TEST_KEY = 'not-a-real-key-1234';
@@ -13,11 +13,11 @@ export const BASE_PROVIDER = {
   model: 'claude-sonnet-4-6',
 };
 
-export function makeSetup(overrides: Partial<TestSetup> = {}): TestSetup {
+export function makeProvider(overrides: Partial<Provider> = {}): Provider {
   return {
-    id: 'setup-1',
-    name: 'Test Setup',
-    description: 'A test setup',
+    id: 'provider-1',
+    name: 'Test Provider',
+    description: 'A test provider',
     provider: BASE_PROVIDER,
     timeoutSeconds: 300,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -51,10 +51,10 @@ export function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
 
 export function createMockStorage(): IStorage {
   return {
-    getSetup: vi.fn(),
-    listSetups: vi.fn(),
-    saveSetup: vi.fn(),
-    deleteSetup: vi.fn(),
+    getProvider: vi.fn(),
+    listProviders: vi.fn(),
+    saveProvider: vi.fn(),
+    deleteProvider: vi.fn(),
     getScenario: vi.fn(),
     listScenarios: vi.fn(),
     saveScenario: vi.fn(),

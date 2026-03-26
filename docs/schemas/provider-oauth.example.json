@@ -1,5 +1,5 @@
 {
-  "id": "setup-oauth-claude-code",
+  "id": "provider-oauth-claude-code",
   "name": "Claude Code (OAuth)",
   "description": "Claude Code via OAuth token",
   "provider": {

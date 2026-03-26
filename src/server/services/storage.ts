@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { IStorage, SetupFilter, ScenarioFilter, RunFilter, EvaluationFilter } from '../interfaces/storage.js';
+import type { IStorage, ProviderFilter, ScenarioFilter, RunFilter, EvaluationFilter } from '../interfaces/storage.js';
 import type {
-  TestSetup,
+  Provider,
   Scenario,
   Run,
   Evaluation,
@@ -22,7 +22,7 @@ export class JsonFileStorage implements IStorage {
   private initialized = false;
 
   private readonly entities: {
-    setups: EntityConfig<TestSetup, SetupFilter>;
+    providers: EntityConfig<Provider, ProviderFilter>;
     scenarios: EntityConfig<Scenario, ScenarioFilter>;
     runs: EntityConfig<Run, RunFilter>;
     evaluations: EntityConfig<Evaluation, EvaluationFilter>;
@@ -33,10 +33,10 @@ export class JsonFileStorage implements IStorage {
     this.fs = fsAdapter ?? defaultFs;
 
     this.entities = {
-      setups: {
-        subdir: 'setups',
+      providers: {
+        subdir: 'providers',
         sensitive: true,
-        matchesFilter: (s: TestSetup, f?: SetupFilter) => {
+        matchesFilter: (s: Provider, f?: ProviderFilter) => {
           if (!f) return true;
           if (f.provider && s.provider.kind !== f.provider) return false;
           if (f.model && s.provider.model !== f.model) return false;
@@ -57,7 +57,7 @@ export class JsonFileStorage implements IStorage {
         sensitive: false,
         matchesFilter: (r: Run, f?: RunFilter) => {
           if (!f) return true;
-          if (f.setupId && r.setupId !== f.setupId) return false;
+          if (f.providerId && r.providerId !== f.providerId) return false;
           if (f.scenarioId && r.scenarioId !== f.scenarioId) return false;
           if (f.status && r.status !== f.status) return false;
           return true;
@@ -78,6 +78,22 @@ export class JsonFileStorage implements IStorage {
 
   private async ensureInit(): Promise<void> {
     if (this.initialized) return;
+
+    // Migrate legacy 'setups' directory to 'providers'
+    const legacyDir = path.join(this.basePath, 'setups');
+    const newDir = path.join(this.basePath, 'providers');
+    try {
+      await this.fs.access(legacyDir);
+      try {
+        await this.fs.access(newDir);
+      } catch {
+        // New dir doesn't exist — rename legacy dir
+        await this.fs.rename(legacyDir, newDir);
+      }
+    } catch {
+      // Legacy dir doesn't exist — nothing to migrate
+    }
+
     for (const cfg of Object.values(this.entities)) {
       await this.fs.mkdir(path.join(this.basePath, cfg.subdir), { recursive: true });
     }
@@ -161,24 +177,24 @@ export class JsonFileStorage implements IStorage {
     }
   }
 
-  // ─── Setups ────────────────────────────────────────────────────────
+  // ─── Providers ──────────────────────────────────────────────────────
 
-  getSetup(id: string): Promise<TestSetup | undefined> {
-    return this.getEntity<TestSetup>(this.entities.setups.subdir, id);
+  getProvider(id: string): Promise<Provider | undefined> {
+    return this.getEntity<Provider>(this.entities.providers.subdir, id);
   }
 
-  listSetups(filter?: SetupFilter): Promise<readonly TestSetup[]> {
-    const cfg = this.entities.setups;
-    return this.listEntities<TestSetup, SetupFilter>(cfg.subdir, cfg.matchesFilter, filter);
+  listProviders(filter?: ProviderFilter): Promise<readonly Provider[]> {
+    const cfg = this.entities.providers;
+    return this.listEntities<Provider, ProviderFilter>(cfg.subdir, cfg.matchesFilter, filter);
   }
 
-  saveSetup(setup: TestSetup): Promise<void> {
-    const cfg = this.entities.setups;
-    return this.saveEntity(cfg.subdir, setup, cfg.sensitive);
+  saveProvider(provider: Provider): Promise<void> {
+    const cfg = this.entities.providers;
+    return this.saveEntity(cfg.subdir, provider, cfg.sensitive);
   }
 
-  deleteSetup(id: string): Promise<boolean> {
-    return this.deleteEntity(this.entities.setups.subdir, id);
+  deleteProvider(id: string): Promise<boolean> {
+    return this.deleteEntity(this.entities.providers.subdir, id);
   }
 
   // ─── Scenarios ─────────────────────────────────────────────────────
@@ -202,8 +218,29 @@ export class JsonFileStorage implements IStorage {
   }
 
   // ─── Runs ──────────────────────────────────────────────────────────
-  getRun(id: string): Promise<Run | undefined> { return this.getEntity(this.entities.runs.subdir, id); }
-  listRuns(filter?: RunFilter): Promise<readonly Run[]> { return this.listEntities(this.entities.runs.subdir, this.entities.runs.matchesFilter, filter); }
+  private normalizeRun(raw: Run): Run {
+    // Accept both old and new field names for backward compat
+    const r = raw as unknown as Record<string, unknown>;
+    if ('setupId' in r && !('providerId' in r)) {
+      return {
+        ...(raw as Run),
+        providerId: r['setupId'] as string,
+        providerSnapshot: (r['setupSnapshot'] ?? raw.providerSnapshot) as Run['providerSnapshot'],
+        reviewerProviderIds: (r['reviewerSetupIds'] ?? raw.reviewerProviderIds) as Run['reviewerProviderIds'],
+        reviewerProviderSnapshots: (r['reviewerSetupSnapshots'] ?? raw.reviewerProviderSnapshots) as Run['reviewerProviderSnapshots'],
+      };
+    }
+    return raw;
+  }
+
+  async getRun(id: string): Promise<Run | undefined> {
+    const raw = await this.getEntity<Run>(this.entities.runs.subdir, id);
+    return raw ? this.normalizeRun(raw) : undefined;
+  }
+  async listRuns(filter?: RunFilter): Promise<readonly Run[]> {
+    const results = await this.listEntities<Run, RunFilter>(this.entities.runs.subdir, this.entities.runs.matchesFilter, filter);
+    return results.map((r) => this.normalizeRun(r));
+  }
   saveRun(run: Run): Promise<void> { return this.saveEntity(this.entities.runs.subdir, run, this.entities.runs.sensitive); }
   deleteRun(id: string): Promise<boolean> { return this.deleteEntity(this.entities.runs.subdir, id); }
 

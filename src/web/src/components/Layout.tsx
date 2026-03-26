@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 const navItems = [
   { to: '/', icon: 'dashboard', label: 'Dashboard' },
-  { to: '/setups', icon: 'settings_input_component', label: 'Setups' },
+  { to: '/providers', icon: 'settings_input_component', label: 'Providers' },
   { to: '/scenarios', icon: 'schema', label: 'Scenarios' },
   { to: '/run', icon: 'play_circle', label: 'New Run' },
   { to: '/history', icon: 'history', label: 'Run History' },

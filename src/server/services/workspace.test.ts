@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { WorkspaceBuilder } from './workspace.js';
 import type { Scenario } from '../types/index.js';
-import { makeSetup, makeScenario } from './storage-test-helpers.js';
+import { makeProvider, makeScenario } from './storage-test-helpers.js';
 
 // Track workspace paths for cleanup
 const cleanupPaths: string[] = [];

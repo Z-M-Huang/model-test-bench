@@ -6,7 +6,7 @@ import type { IStorage } from '../interfaces/storage.js';
 import type { IRunner } from '../interfaces/runner.js';
 import type { ILogger } from '../interfaces/logger.js';
 import type { Run } from '../types/index.js';
-import { makeSetup, makeScenario, createMockStorage, createMockLogger } from './route-test-helpers.js';
+import { makeProvider, makeScenario, createMockStorage, createMockLogger } from './route-test-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,10 +15,10 @@ import { makeSetup, makeScenario, createMockStorage, createMockLogger } from './
 function makeRun(overrides: Partial<Run> = {}): Run {
   return {
     id: 'run-1',
-    setupId: 'setup-1',
+    providerId: 'provider-1',
     scenarioId: 'scenario-1',
     status: 'completed',
-    setupSnapshot: makeSetup(),
+    providerSnapshot: makeProvider(),
     scenarioSnapshot: makeScenario(),
     messages: [{ timestamp: '2026-01-01T00:00:00.000Z', message: { type: 'result' } }],
     resultText: 'done',
@@ -33,7 +33,7 @@ function makeRun(overrides: Partial<Run> = {}): Run {
 
 function createMockRunner(): IRunner {
   return {
-    executeRun: vi.fn().mockImplementation((_setup, _scenario, run) =>
+    executeRun: vi.fn().mockImplementation((_provider, _scenario, run) =>
       Promise.resolve({
         ...run,
         status: 'completed',
@@ -78,13 +78,13 @@ describe('Run routes', () => {
 
   describe('POST /api/runs', () => {
     it('creates a run and returns 202 with run ID', async () => {
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       vi.mocked(storage.getScenario).mockResolvedValue(makeScenario());
       vi.mocked(storage.saveRun).mockResolvedValue(undefined);
 
       const res = await request(app)
         .post('/api/runs')
-        .send({ setupId: 'setup-1', scenarioId: 'scenario-1' });
+        .send({ providerId: 'provider-1', scenarioId: 'scenario-1' });
 
       expect(res.status).toBe(202);
       expect(res.body.id).toBeDefined();
@@ -92,55 +92,55 @@ describe('Run routes', () => {
       expect(storage.saveRun).toHaveBeenCalled();
     });
 
-    it('returns 400 when setupId is missing', async () => {
+    it('returns 400 when providerId is missing', async () => {
       const res = await request(app)
         .post('/api/runs')
         .send({ scenarioId: 'scenario-1' });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('setupId');
+      expect(res.body.error).toContain('providerId');
     });
 
     it('returns 400 when scenarioId is missing', async () => {
       const res = await request(app)
         .post('/api/runs')
-        .send({ setupId: 'setup-1' });
+        .send({ providerId: 'provider-1' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('scenarioId');
     });
 
-    it('returns 404 when setup does not exist', async () => {
-      vi.mocked(storage.getSetup).mockResolvedValue(undefined);
+    it('returns 404 when provider does not exist', async () => {
+      vi.mocked(storage.getProvider).mockResolvedValue(undefined);
 
       const res = await request(app)
         .post('/api/runs')
-        .send({ setupId: 'nonexistent', scenarioId: 'scenario-1' });
+        .send({ providerId: 'nonexistent', scenarioId: 'scenario-1' });
 
       expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Setup not found');
+      expect(res.body.error).toBe('Provider not found');
     });
 
     it('returns 404 when scenario does not exist', async () => {
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       vi.mocked(storage.getScenario).mockResolvedValue(undefined);
 
       const res = await request(app)
         .post('/api/runs')
-        .send({ setupId: 'setup-1', scenarioId: 'nonexistent' });
+        .send({ providerId: 'provider-1', scenarioId: 'nonexistent' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Scenario not found');
     });
 
     it('starts execution asynchronously', async () => {
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       vi.mocked(storage.getScenario).mockResolvedValue(makeScenario());
       vi.mocked(storage.saveRun).mockResolvedValue(undefined);
 
       await request(app)
         .post('/api/runs')
-        .send({ setupId: 'setup-1', scenarioId: 'scenario-1' });
+        .send({ providerId: 'provider-1', scenarioId: 'scenario-1' });
 
       // Give async execution a tick to start
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -163,13 +163,13 @@ describe('Run routes', () => {
       expect(res.body[0].id).toBe('run-1');
     });
 
-    it('filters by setupId', async () => {
+    it('filters by providerId', async () => {
       vi.mocked(storage.listRuns).mockResolvedValue([]);
 
-      await request(app).get('/api/runs?setupId=setup-1');
+      await request(app).get('/api/runs?providerId=provider-1');
 
       expect(storage.listRuns).toHaveBeenCalledWith(
-        expect.objectContaining({ setupId: 'setup-1' }),
+        expect.objectContaining({ providerId: 'provider-1' }),
       );
     });
 

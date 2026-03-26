@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import type { Run } from '../types.js';
 
-/** Summary shape returned by the setups list endpoint (no full provider). */
-interface SetupSummary {
+/** Summary shape returned by the providers list endpoint (no full provider). */
+interface ProviderSummary {
   id: string;
   name: string;
   providerType: string;
@@ -18,7 +18,7 @@ const selectCls =
   'w-full bg-surface-container-low border border-outline-variant/20 rounded-md px-3 py-2 text-sm text-on-surface focus:ring-1 focus:ring-primary-container focus:border-primary-container';
 
 interface EvalEntry {
-  setupId: string;
+  providerId: string;
   role: string;
 }
 
@@ -27,7 +27,7 @@ export function EvalConfig(): React.JSX.Element {
   const navigate = useNavigate();
 
   const [run, setRun] = useState<Run | null>(null);
-  const [setups, setSetups] = useState<SetupSummary[]>([]);
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -37,12 +37,12 @@ export function EvalConfig(): React.JSX.Element {
 
   useEffect(() => {
     if (!runId) return;
-    Promise.all([api.runs.get(runId), api.setups.list()])
+    Promise.all([api.runs.get(runId), api.providers.list()])
       .then(([r, s]) => {
         setRun(r);
-        setSetups(s);
+        setProviders(s);
         if (s.length > 0) {
-          setEvaluators([{ setupId: s[0].id, role: 'Synthesizer' }]);
+          setEvaluators([{ providerId: s[0].id, role: 'Synthesizer' }]);
         }
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load data'))
@@ -62,12 +62,12 @@ export function EvalConfig(): React.JSX.Element {
   }
 
   function addEvaluator() {
-    if (setups.length === 0) return;
+    if (providers.length === 0) return;
     setEvaluators((prev) => {
       const updated = prev.map((e, i) =>
         i === prev.length - 1 ? { ...e, role: prev.length > 1 ? `Evaluator ${prev.length}` : 'Evaluator' } : e,
       );
-      return [...updated, { setupId: setups[0].id, role: 'Synthesizer' }];
+      return [...updated, { providerId: providers[0].id, role: 'Synthesizer' }];
     });
   }
 
@@ -130,9 +130,9 @@ export function EvalConfig(): React.JSX.Element {
         </div>
       )}
 
-      {setups.length === 0 ? (
+      {providers.length === 0 ? (
         <div className="bg-surface-container rounded-md p-6 text-center text-on-surface-variant text-sm">
-          No setups available. Create a setup first to use as an evaluator.
+          No providers available. Create a provider first to use as an evaluator.
         </div>
       ) : (
         <div className="space-y-6">
@@ -164,9 +164,9 @@ export function EvalConfig(): React.JSX.Element {
                     </div>
                   )}
                   <div>
-                    <label className={labelCls}>Setup</label>
-                    <select className={selectCls} value={entry.setupId} onChange={(e) => updateEvaluator(idx, { setupId: e.target.value })}>
-                      {setups.map((s) => (
+                    <label className={labelCls}>Provider</label>
+                    <select className={selectCls} value={entry.providerId} onChange={(e) => updateEvaluator(idx, { providerId: e.target.value })}>
+                      {providers.map((s) => (
                         <option key={s.id} value={s.id}>{s.name} ({s.model})</option>
                       ))}
                     </select>

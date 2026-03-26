@@ -10,13 +10,13 @@ test.describe('Run Page', () => {
 
   test('page loads with correct heading', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
-    await expect(page.getByText('Execute a test scenario against a setup configuration.')).toBeVisible();
+    await expect(page.getByText('Execute a test scenario against a provider configuration.')).toBeVisible();
   });
 
-  test('setup dropdown is present with label', async ({ page }) => {
-    await expect(page.getByText('Execution Setup')).toBeVisible();
-    const setupSelect = page.locator('select').first();
-    await expect(setupSelect).toBeVisible();
+  test('provider dropdown is present with label', async ({ page }) => {
+    await expect(page.getByText('API Provider')).toBeVisible();
+    const providerSelect = page.locator('select').first();
+    await expect(providerSelect).toBeVisible();
   });
 
   test('scenario dropdown is present with label', async ({ page }) => {
@@ -31,13 +31,13 @@ test.describe('Run Page', () => {
     expect(optionCount).toBeGreaterThanOrEqual(1);
   });
 
-  test('setup dropdown shows "No setups available" when no setups exist', async ({ page, request }) => {
-    const listRes = await request.get('/api/setups');
-    const setups = await listRes.json();
-    if (setups.length === 0) {
-      const setupSelect = page.locator('select').first();
-      const noSetupOption = setupSelect.locator('option', { hasText: 'No setups available' });
-      await expect(noSetupOption).toBeAttached();
+  test('provider dropdown shows "No providers available" when no providers exist', async ({ page, request }) => {
+    const listRes = await request.get('/api/providers');
+    const providers = await listRes.json();
+    if (providers.length === 0) {
+      const providerSelect = page.locator('select').first();
+      const noProviderOption = providerSelect.locator('option', { hasText: 'No providers available' });
+      await expect(noProviderOption).toBeAttached();
     }
   });
 
@@ -46,17 +46,17 @@ test.describe('Run Page', () => {
     await expect(startBtn).toBeVisible();
   });
 
-  test('Start Run button is disabled when no setup is selected', async ({ page, request }) => {
-    const listRes = await request.get('/api/setups');
-    const setups = await listRes.json();
-    if (setups.length === 0) {
+  test('Start Run button is disabled when no provider is selected', async ({ page, request }) => {
+    const listRes = await request.get('/api/providers');
+    const providers = await listRes.json();
+    if (providers.length === 0) {
       const startBtn = page.getByRole('button', { name: /Start Run/i });
       await expect(startBtn).toBeDisabled();
     }
   });
 
   test('message log area shows placeholder text before run starts', async ({ page }) => {
-    await expect(page.getByText('Select a setup and scenario, then click Start Run.')).toBeVisible();
+    await expect(page.getByText('Select a provider and scenario, then click Start Run.')).toBeVisible();
   });
 
   test('page is accessible via sidebar navigation', async ({ page }) => {
@@ -68,21 +68,21 @@ test.describe('Run Page', () => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
   });
 
-  // --- Reviewer Setups section ---
+  // --- Reviewer Providers section ---
 
-  test('reviewer setups section is visible with add button', async ({ page }) => {
-    await expect(page.getByText('Reviewer Setups')).toBeVisible();
+  test('reviewer providers section is visible with add button', async ({ page }) => {
+    await expect(page.getByText('Reviewer Providers')).toBeVisible();
     await expect(page.getByText('No reviewers')).toBeVisible();
     await expect(page.getByRole('button', { name: /Add/i }).first()).toBeVisible();
   });
 
-  test('can add and remove reviewer setups', async ({ page, request }) => {
-    const listRes = await request.get('/api/setups');
-    const setups = await listRes.json();
-    if (setups.length === 0) return; // skip if no setups
+  test('can add and remove reviewer providers', async ({ page, request }) => {
+    const listRes = await request.get('/api/providers');
+    const providers = await listRes.json();
+    if (providers.length === 0) return; // skip if no providers
 
     // Add first reviewer
-    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Setups' }).getByRole('button', { name: /Add/i });
+    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).getByRole('button', { name: /Add/i });
     await addBtn.click();
 
     // "No reviewers" text should disappear
@@ -102,14 +102,14 @@ test.describe('Run Page', () => {
     await expect(page.getByText('Synthesizer')).toBeVisible();
 
     // Remove the first reviewer
-    const closeButtons = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Setups' }).locator('button:has(span:text("close"))');
+    const closeButtons = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).locator('button:has(span:text("close"))');
     await closeButtons.first().click();
 
     // Should be back to one reviewer (Synthesizer only)
     await expect(page.getByText('Synthesizer')).toBeVisible();
 
     // Remove the last reviewer
-    await page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Setups' }).locator('button:has(span:text("close"))').click();
+    await page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).locator('button:has(span:text("close"))').click();
 
     // Should show "No reviewers" again
     await expect(page.getByText('No reviewers')).toBeVisible();
@@ -118,12 +118,12 @@ test.describe('Run Page', () => {
   // --- Start Run interaction ---
 
   test('clicking Start Run does not crash the page', async ({ page, request }) => {
-    // Ensure we have setups and scenarios
-    const setupsRes = await request.get('/api/setups');
-    const setups = await setupsRes.json();
+    // Ensure we have providers and scenarios
+    const providersRes = await request.get('/api/providers');
+    const providers = await providersRes.json();
     const scenariosRes = await request.get('/api/scenarios');
     const scenarios = await scenariosRes.json();
-    if (setups.length === 0 || scenarios.length === 0) return;
+    if (providers.length === 0 || scenarios.length === 0) return;
 
     const startBtn = page.getByRole('button', { name: /Start Run/i });
     await expect(startBtn).toBeEnabled();
@@ -137,15 +137,15 @@ test.describe('Run Page', () => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
   });
 
-  test('clicking Start Run with reviewer setups does not crash', async ({ page, request }) => {
-    const setupsRes = await request.get('/api/setups');
-    const setups = await setupsRes.json();
+  test('clicking Start Run with reviewer providers does not crash', async ({ page, request }) => {
+    const providersRes = await request.get('/api/providers');
+    const providers = await providersRes.json();
     const scenariosRes = await request.get('/api/scenarios');
     const scenarios = await scenariosRes.json();
-    if (setups.length === 0 || scenarios.length === 0) return;
+    if (providers.length === 0 || scenarios.length === 0) return;
 
     // Add a reviewer
-    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Setups' }).getByRole('button', { name: /Add/i });
+    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).getByRole('button', { name: /Add/i });
     await addBtn.click();
     await expect(page.getByText('Synthesizer')).toBeVisible();
 

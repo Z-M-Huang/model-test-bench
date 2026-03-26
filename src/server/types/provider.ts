@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Provider & Setup Types
+// Provider Types
 // ---------------------------------------------------------------------------
 
 /** Discriminated union for provider authentication strategies. */
@@ -105,8 +105,8 @@ export interface ScoringDimension {
   readonly description: string;
 }
 
-/** A complete test setup that defines how to connect to the provider. */
-export interface TestSetup {
+/** A provider configuration that defines how to connect to an LLM provider. */
+export interface Provider {
   readonly id: string;
   readonly name: string;
   readonly description: string;

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method -- vi.fn() mocks don't have this-binding issues */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JsonFileStorage } from './storage.js';
-import { BASE_PROVIDER, createMockFs, makeSetup, makeScenario, makeRun, makeEvaluation } from './storage-test-helpers.js';
+import { BASE_PROVIDER, createMockFs, makeProvider, makeScenario, makeRun, makeEvaluation } from './storage-test-helpers.js';
 
 describe('JsonFileStorage', () => {
   let mockFsData: ReturnType<typeof createMockFs>;
@@ -15,10 +15,10 @@ describe('JsonFileStorage', () => {
   // ─── Initialization ────────────────────────────────────────────
 
   it('creates subdirectories on first operation', async () => {
-    await storage.listSetups();
+    await storage.listProviders();
 
     expect(mockFsData.fs.mkdir).toHaveBeenCalledWith(
-      '/test-base/setups',
+      '/test-base/providers',
       { recursive: true },
     );
     expect(mockFsData.fs.mkdir).toHaveBeenCalledWith(
@@ -36,23 +36,23 @@ describe('JsonFileStorage', () => {
   });
 
   it('only initializes subdirectories once', async () => {
-    await storage.listSetups();
-    await storage.listSetups();
+    await storage.listProviders();
+    await storage.listProviders();
     expect(mockFsData.fs.mkdir).toHaveBeenCalledTimes(4);
   });
 
-  // ─── Setups CRUD ───────────────────────────────────────────────
+  // ─── Providers CRUD ─────────────────────────────────────────────
 
-  describe('setups', () => {
-    it('saves and retrieves a setup', async () => {
-      const setup = makeSetup();
-      await storage.saveSetup(setup);
-      const retrieved = await storage.getSetup('setup-1');
-      expect(retrieved).toEqual(setup);
+  describe('providers', () => {
+    it('saves and retrieves a provider', async () => {
+      const provider = makeProvider();
+      await storage.saveProvider(provider);
+      const retrieved = await storage.getProvider('provider-1');
+      expect(retrieved).toEqual(provider);
     });
 
     it('uses atomic write (temp + rename) for saves', async () => {
-      await storage.saveSetup(makeSetup());
+      await storage.saveProvider(makeProvider());
       expect(mockFsData.fs.writeFile).toHaveBeenCalledTimes(1);
       expect(mockFsData.fs.rename).toHaveBeenCalledTimes(1);
       const writePath = (mockFsData.fs.writeFile as ReturnType<typeof vi.fn>)
@@ -60,57 +60,57 @@ describe('JsonFileStorage', () => {
       expect(writePath).toContain('.tmp-');
     });
 
-    it('writes setup files with mode 0o600 (sensitive)', async () => {
-      await storage.saveSetup(makeSetup());
+    it('writes provider files with mode 0o600 (sensitive)', async () => {
+      await storage.saveProvider(makeProvider());
       const opts = (mockFsData.fs.writeFile as ReturnType<typeof vi.fn>)
         .mock.calls[0][2] as { mode: number } | undefined;
       expect(opts?.mode).toBe(0o600);
     });
 
-    it('returns undefined for non-existent setup', async () => {
-      const result = await storage.getSetup('nonexistent');
+    it('returns undefined for non-existent provider', async () => {
+      const result = await storage.getProvider('nonexistent');
       expect(result).toBeUndefined();
     });
 
-    it('lists all setups', async () => {
-      await storage.saveSetup(makeSetup({ id: 'setup-1' }));
-      await storage.saveSetup(makeSetup({ id: 'setup-2', name: 'Second' }));
-      const all = await storage.listSetups();
+    it('lists all providers', async () => {
+      await storage.saveProvider(makeProvider({ id: 'provider-1' }));
+      await storage.saveProvider(makeProvider({ id: 'provider-2', name: 'Second' }));
+      const all = await storage.listProviders();
       expect(all).toHaveLength(2);
     });
 
-    it('filters setups by provider kind', async () => {
-      await storage.saveSetup(makeSetup({ id: 's1', provider: { ...BASE_PROVIDER, kind: 'api' } }));
-      await storage.saveSetup(makeSetup({
+    it('filters providers by provider kind', async () => {
+      await storage.saveProvider(makeProvider({ id: 's1', provider: { ...BASE_PROVIDER, kind: 'api' } }));
+      await storage.saveProvider(makeProvider({
         id: 's2',
         provider: { kind: 'oauth', oauthToken: 'tok', model: 'claude-sonnet-4-6' },
       }));
-      const filtered = await storage.listSetups({ provider: 'api' });
+      const filtered = await storage.listProviders({ provider: 'api' });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('s1');
     });
 
-    it('filters setups by model', async () => {
-      await storage.saveSetup(makeSetup({
+    it('filters providers by model', async () => {
+      await storage.saveProvider(makeProvider({
         id: 's1', provider: { ...BASE_PROVIDER, model: 'claude-sonnet-4-6' },
       }));
-      await storage.saveSetup(makeSetup({
+      await storage.saveProvider(makeProvider({
         id: 's2', provider: { ...BASE_PROVIDER, model: 'claude-opus-4' },
       }));
-      const filtered = await storage.listSetups({ model: 'claude-opus-4' });
+      const filtered = await storage.listProviders({ model: 'claude-opus-4' });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('s2');
     });
 
-    it('deletes an existing setup', async () => {
-      await storage.saveSetup(makeSetup());
-      const deleted = await storage.deleteSetup('setup-1');
+    it('deletes an existing provider', async () => {
+      await storage.saveProvider(makeProvider());
+      const deleted = await storage.deleteProvider('provider-1');
       expect(deleted).toBe(true);
-      expect(await storage.getSetup('setup-1')).toBeUndefined();
+      expect(await storage.getProvider('provider-1')).toBeUndefined();
     });
 
-    it('returns false when deleting non-existent setup', async () => {
-      expect(await storage.deleteSetup('nonexistent')).toBe(false);
+    it('returns false when deleting non-existent provider', async () => {
+      expect(await storage.deleteProvider('nonexistent')).toBe(false);
     });
   });
 
@@ -163,10 +163,10 @@ describe('JsonFileStorage', () => {
       expect(await storage.listRuns()).toHaveLength(2);
     });
 
-    it('filters runs by setupId', async () => {
-      await storage.saveRun(makeRun({ id: 'r1', setupId: 'sa' }));
-      await storage.saveRun(makeRun({ id: 'r2', setupId: 'sb' }));
-      const filtered = await storage.listRuns({ setupId: 'sa' });
+    it('filters runs by providerId', async () => {
+      await storage.saveRun(makeRun({ id: 'r1', providerId: 'sa' }));
+      await storage.saveRun(makeRun({ id: 'r2', providerId: 'sb' }));
+      const filtered = await storage.listRuns({ providerId: 'sa' });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('r1');
     });
@@ -245,25 +245,25 @@ describe('JsonFileStorage', () => {
 
   describe('edge cases', () => {
     it('handles empty directory listing', async () => {
-      expect(await storage.listSetups()).toEqual([]);
+      expect(await storage.listProviders()).toEqual([]);
     });
 
     it('skips non-json files in directory listing', async () => {
-      mockFsData.state.files.set('/test-base/setups/readme.txt', 'not json');
-      await storage.saveSetup(makeSetup());
-      expect(await storage.listSetups()).toHaveLength(1);
+      mockFsData.state.files.set('/test-base/providers/readme.txt', 'not json');
+      await storage.saveProvider(makeProvider());
+      expect(await storage.listProviders()).toHaveLength(1);
     });
 
     it('skips corrupt json files gracefully', async () => {
-      mockFsData.state.files.set('/test-base/setups/bad.json', '{corrupt');
-      await storage.saveSetup(makeSetup());
-      expect(await storage.listSetups()).toHaveLength(1);
+      mockFsData.state.files.set('/test-base/providers/bad.json', '{corrupt');
+      await storage.saveProvider(makeProvider());
+      expect(await storage.listProviders()).toHaveLength(1);
     });
 
     it('overwrites existing entity on save', async () => {
-      await storage.saveSetup(makeSetup({ id: 'setup-1', name: 'V1' }));
-      await storage.saveSetup(makeSetup({ id: 'setup-1', name: 'V2' }));
-      expect((await storage.getSetup('setup-1'))?.name).toBe('V2');
+      await storage.saveProvider(makeProvider({ id: 'provider-1', name: 'V1' }));
+      await storage.saveProvider(makeProvider({ id: 'provider-1', name: 'V2' }));
+      expect((await storage.getProvider('provider-1'))?.name).toBe('V2');
     });
 
     it('returns empty list with no filter', async () => {
@@ -281,7 +281,7 @@ describe('JsonFileStorage', () => {
         new Error('ENOENT: no such directory'),
       );
       const freshStorage = new JsonFileStorage('/test-base', mockFsData.fs);
-      expect(await freshStorage.listSetups()).toEqual([]);
+      expect(await freshStorage.listProviders()).toEqual([]);
     });
   });
 

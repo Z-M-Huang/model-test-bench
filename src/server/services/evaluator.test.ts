@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EvaluationCallbacks } from '../interfaces/evaluator.js';
-import type { Run, Scenario, TestSetup, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
-import { makeSetup, makeScenario, makeRun, BASE_PROVIDER } from './storage-test-helpers.js';
+import type { Run, Scenario, Provider, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
+import { makeProvider, makeScenario, makeRun, BASE_PROVIDER } from './storage-test-helpers.js';
 
 // Mock the SDK — must be before importing the evaluator
 const mockQueryFn = vi.fn();
@@ -39,11 +39,11 @@ const mkScenario = (o: Partial<Scenario> = {}): Scenario => makeScenario({
   ...o,
 });
 
-const mkSetup = (o: Partial<TestSetup> = {}): TestSetup => makeSetup({ ...o });
+const mkProvider = (o: Partial<Provider> = {}): Provider => makeProvider({ ...o });
 
 function mkCallbacks(): EvaluationCallbacks & { statuses: EvaluationStatus[] } {
   const statuses: EvaluationStatus[] = [];
-  return { statuses, onStatusChange: vi.fn((s: EvaluationStatus) => statuses.push(s)), onProgress: vi.fn() };
+  return { statuses, onStatusChange: vi.fn((s: EvaluationStatus) => statuses.push(s)), onProgress: vi.fn(), onMessage: vi.fn() };
 }
 
 function mockQuery(text: string, cost = 0.01) {
@@ -83,7 +83,7 @@ describe('EvaluationOrchestrator', () => {
         return mockQuery(synthesisJ());
       });
       const cb = mkCallbacks();
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest(), cb);
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest(), cb);
       expect(result.status).toBe('completed');
       expect(result.rounds).toHaveLength(1);
       expect(result.rounds[0].roundNumber).toBe(1);
@@ -94,7 +94,7 @@ describe('EvaluationOrchestrator', () => {
 
     it('builds ledger with cost tracking', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9 }), 0.02));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest(), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest(), mkCallbacks());
       expect(result.ledger).toHaveLength(2);
       expect(result.ledger[0].evaluatorRole).toBe('primary');
       expect(result.ledger[0].totalCostUsd).toBeGreaterThan(0);
@@ -112,7 +112,7 @@ describe('EvaluationOrchestrator', () => {
         if (c <= 6) return mockQuery(debateJ('AGREE', { correctness: 8, style: 7 }));
         return mockQuery(synthesisJ());
       });
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ maxRounds: 3 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ maxRounds: 3 }), mkCallbacks());
       expect(result.rounds.length).toBeLessThanOrEqual(3);
       expect(result.rounds[result.rounds.length - 1].consensusReached).toBe(true);
     });
@@ -128,7 +128,7 @@ describe('EvaluationOrchestrator', () => {
         if (c <= 6) return mockQuery(debateJ('DISAGREE', c === 5 ? { correctness: 9, style: 7 } : { correctness: 5, style: 5 }));
         return mockQuery(synthesisJ());
       });
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ maxRounds: 2 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ maxRounds: 2 }), mkCallbacks());
       expect(result.rounds).toHaveLength(2);
       expect(result.synthesis).toBeDefined();
     });
@@ -137,7 +137,7 @@ describe('EvaluationOrchestrator', () => {
   describe('structured output parsing', () => {
     it('parses valid JSON responses into evaluation fields', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9, style: 8 }, 0.95)));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.similarity).toBeGreaterThan(0);
       expect(result.rounds[0].evaluations.length).toBeGreaterThan(0);
     });
@@ -146,7 +146,7 @@ describe('EvaluationOrchestrator', () => {
   describe('text-mode fallback', () => {
     it('handles non-JSON responses gracefully', async () => {
       mockQueryFn.mockImplementation(() => mockQuery('The overall weighted score is 7.5 out of 10.'));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
     });
   });
@@ -154,7 +154,7 @@ describe('EvaluationOrchestrator', () => {
   describe('partial results handling', () => {
     it('produces valid evaluation with empty responses', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(''));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
       expect(result.synthesis).toBeDefined();
       expect(result.ledger).toHaveLength(1);
@@ -162,7 +162,7 @@ describe('EvaluationOrchestrator', () => {
 
     it('handles missing scores without errors', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(JSON.stringify({ summary: 'Looks good' })));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
       expect(result.answerComparison.similarity).toBe(0);
     });
@@ -171,14 +171,14 @@ describe('EvaluationOrchestrator', () => {
   describe('answer comparison', () => {
     it('marks answer as matching when closeness >= 0.7', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9 }, 0.85)));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.matches).toBe(true);
       expect(result.answerComparison.similarity).toBeCloseTo(0.85, 1);
     });
 
     it('marks answer as not matching when closeness < 0.7', async () => {
       mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 3 }, 0.3)));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.matches).toBe(false);
     });
   });
@@ -190,7 +190,7 @@ describe('EvaluationOrchestrator', () => {
         missedCritical: ['Must validate input'], strengths: [], weaknesses: [], summary: 'Missed',
       });
       mockQueryFn.mockImplementation(() => mockQuery(missed));
-      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
+      const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       const req = result.criticalResults.find((r) => r.requirement === 'Must validate input');
       expect(req?.met).toBe(false);
     });
@@ -212,7 +212,7 @@ describe('EvaluationOrchestrator', () => {
       });
 
       await expect(
-        orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
+        orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
       ).rejects.toThrow('SDK query failed');
     });
 
@@ -230,7 +230,7 @@ describe('EvaluationOrchestrator', () => {
       });
 
       await expect(
-        orch.evaluateRun(mkRun(), mkScenario(), mkSetup(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
+        orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
       ).rejects.toThrow('unknown error');
     });
   });

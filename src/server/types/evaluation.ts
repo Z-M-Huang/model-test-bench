@@ -2,7 +2,7 @@
 // Evaluation Types
 // ---------------------------------------------------------------------------
 
-import type { ProviderConfig } from './setup.js';
+import type { ProviderConfig } from './provider.js';
 
 /** Configuration for an evaluator agent. */
 export interface EvaluatorConfig {

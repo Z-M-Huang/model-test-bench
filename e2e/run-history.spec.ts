@@ -14,7 +14,7 @@ test.describe('Run History', () => {
   });
 
   test('table headers render', async ({ page }) => {
-    const headers = ['Status', 'Scenario', 'Setup', 'Duration', 'Turns', 'Cost', 'Date'];
+    const headers = ['Status', 'Scenario', 'Provider', 'Duration', 'Turns', 'Cost', 'Date'];
     for (const header of headers) {
       await expect(page.locator('th', { hasText: header }).first()).toBeVisible();
     }
@@ -29,9 +29,9 @@ test.describe('Run History', () => {
   });
 
   test('filter dropdowns render', async ({ page }) => {
-    // All Setups filter
-    const setupFilter = page.locator('select', { hasText: 'All Setups' });
-    await expect(setupFilter).toBeVisible();
+    // All Providers filter
+    const providerFilter = page.locator('select', { hasText: 'All Providers' });
+    await expect(providerFilter).toBeVisible();
 
     // All Scenarios filter
     const scenarioFilter = page.locator('select', { hasText: 'All Scenarios' });

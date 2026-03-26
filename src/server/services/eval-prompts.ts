@@ -2,7 +2,7 @@
 // Evaluation Prompt Builders
 // ---------------------------------------------------------------------------
 
-import type { Scenario, ScoringDimension, TestSetup } from '../types/index.js';
+import type { Scenario, ScoringDimension, Provider } from '../types/index.js';
 import type { IndividualEvaluation } from '../types/evaluation.js';
 import type { TranscriptSummary } from './transcript-formatter.js';
 import type { InstructionBlock } from './instruction-parser.js';
@@ -151,7 +151,7 @@ Respond with valid JSON:
 export function buildSynthesisPrompt(
   allEvaluations: readonly IndividualEvaluation[],
   scenario: Scenario,
-  setup: TestSetup,
+  provider: Provider,
 ): string {
   const evalSummaries = allEvaluations
     .map((e) => `[${e.evaluatorRole}] ${e.dimension}: ${e.score}/10 — ${e.reasoning}`)
@@ -167,9 +167,9 @@ ${scenario.name}: ${scenario.prompt}
 ## Scoring Dimensions & Weights
 ${dimensions}
 
-## Setup
-Name: ${setup.name}
-Model: ${setup.provider.model}
+## Provider
+Name: ${provider.name}
+Model: ${provider.provider.model}
 
 ## All Individual Evaluations
 ${evalSummaries}

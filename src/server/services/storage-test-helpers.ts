@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import type { FsAdapter } from './fs-adapter.js';
 import type {
-  TestSetup,
+  Provider,
   Scenario,
   Run,
   Evaluation,
@@ -16,11 +16,11 @@ export const BASE_PROVIDER = {
   model: 'claude-sonnet-4-6',
 };
 
-export function makeSetup(overrides: Partial<TestSetup> = {}): TestSetup {
+export function makeProvider(overrides: Partial<Provider> = {}): Provider {
   return {
-    id: 'setup-1',
-    name: 'Test Setup',
-    description: 'A test setup',
+    id: 'provider-1',
+    name: 'Test Provider',
+    description: 'A test provider',
     provider: BASE_PROVIDER,
     timeoutSeconds: 300,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -55,10 +55,10 @@ export function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
 export function makeRun(overrides: Partial<Run> = {}): Run {
   return {
     id: 'run-1',
-    setupId: 'setup-1',
+    providerId: 'provider-1',
     scenarioId: 'scenario-1',
     status: 'completed',
-    setupSnapshot: makeSetup(),
+    providerSnapshot: makeProvider(),
     scenarioSnapshot: makeScenario(),
     messages: [],
     resultText: 'done',

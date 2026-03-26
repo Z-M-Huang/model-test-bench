@@ -11,7 +11,7 @@ import type {
 import type { IRunner, RunCallbacks } from '../interfaces/runner.js';
 import type { IWorkspaceBuilder } from '../interfaces/workspace.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { TestSetup, Scenario, Run, SDKMessageRecord, ThinkingConfig } from '../types/index.js';
+import type { Provider, Scenario, Run, SDKMessageRecord, ThinkingConfig } from '../types/index.js';
 import { buildRunEnv } from './env-builder.js';
 import { buildAgentsMap, buildMcpMap } from './agent-mapper.js';
 
@@ -42,7 +42,7 @@ export class ScenarioRunner implements IRunner {
   ) {}
 
   async executeRun(
-    setup: TestSetup,
+    provider: Provider,
     scenario: Scenario,
     run: Run,
     callbacks: RunCallbacks,
@@ -60,18 +60,18 @@ export class ScenarioRunner implements IRunner {
       ws = await this.workspace.createWorkspace(scenario);
 
       // Set up timeout after workspace creation succeeds
-      const timeoutMs = setup.timeoutSeconds * 1000;
+      const timeoutMs = provider.timeoutSeconds * 1000;
       timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
       callbacks.onStatusChange('running');
 
-      // Build SDK options — provider/model/thinking/effort from setup, agent config from scenario
-      const env = buildRunEnv(setup.provider);
+      // Build SDK options — provider/model/thinking/effort from provider, agent config from scenario
+      const env = buildRunEnv(provider.provider);
       const agents = await buildAgentsMap(scenario.subagents);
       const mcpServers = buildMcpMap(scenario.mcpServers);
 
       const options: SDKOptions = {
         cwd: ws.workspacePath,
-        model: setup.provider.model,
+        model: provider.provider.model,
         env,
         settingSources: ['project'],
         permissionMode: scenario.permissionMode,
@@ -80,8 +80,8 @@ export class ScenarioRunner implements IRunner {
         persistSession: false,
         abortController,
         maxTurns: scenario.maxTurns,
-        thinking: toSDKThinking(setup.thinking),
-        effort: setup.effort === 'none' ? undefined : setup.effort,
+        thinking: toSDKThinking(provider.thinking),
+        effort: provider.effort === 'none' ? undefined : provider.effort,
       };
 
       if (scenario.allowedTools && scenario.allowedTools.length > 0) {
@@ -160,7 +160,7 @@ export class ScenarioRunner implements IRunner {
         totalCostUsd: 0,
         durationMs,
         numTurns: 0,
-        error: isAbort ? `Timeout after ${setup.timeoutSeconds}s` : errorMessage,
+        error: isAbort ? `Timeout after ${provider.timeoutSeconds}s` : errorMessage,
         updatedAt: new Date().toISOString(),
       };
       callbacks.onStatusChange(errorRun.status);

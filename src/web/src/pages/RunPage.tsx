@@ -1,116 +1,67 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, subscribeSSE } from '../api.js';
-import type { TestSetup, Scenario, Run, SDKMessageRecord } from '../types.js';
+import { api } from '../api.js';
+import type { Provider, Scenario, Run } from '../types.js';
 import { RunStatusBar } from '../components/RunStatusBar.js';
 import { MessageLog } from '../components/MessageLog.js';
+import { useLiveProcess } from '../hooks/useLiveProcess.js';
 
 export function RunPage(): React.JSX.Element {
   const navigate = useNavigate();
-  const [setups, setSetups] = useState<TestSetup[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [selectedSetup, setSelectedSetup] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedScenario, setSelectedScenario] = useState('');
   const [run, setRun] = useState<Run | null>(null);
-  const [messages, setMessages] = useState<SDKMessageRecord[]>([]);
+  const [sseUrl, setSseUrl] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const unsubRef = useRef<(() => void) | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { messages, elapsedMs, isConnected } = useLiveProcess({
+    sseUrl,
+    onComplete: (data) => {
+      if (data.type === 'runComplete') {
+        const completedRun = data.run as Run;
+        setRun(completedRun);
+        navigate(`/runs/${completedRun.id}`);
+      } else if (data.type === 'status') {
+        setRun((prev) => prev ? { ...prev, status: data.status as Run['status'] } : prev);
+      }
+    },
+  });
 
   useEffect(() => {
-    Promise.all([api.setups.list(), api.scenarios.list()])
+    Promise.all([api.providers.list(), api.scenarios.list()])
       .then(([s, sc]) => {
-        setSetups(s);
+        setProviders(s);
         setScenarios(sc);
-        if (s.length > 0) setSelectedSetup(s[0].id);
+        if (s.length > 0) setSelectedProvider(s[0].id);
         if (sc.length > 0) setSelectedScenario(sc[0].id);
       })
-      .catch(() => setError('Failed to load setups/scenarios'));
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      unsubRef.current?.();
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+      .catch(() => setError('Failed to load providers/scenarios'));
   }, []);
 
   const startRun = useCallback(async () => {
-    if (!selectedSetup || !selectedScenario) return;
+    if (!selectedProvider || !selectedScenario) return;
     setStarting(true);
     setError(null);
-    setMessages([]);
-    setElapsedMs(0);
 
     try {
       const newRun = await api.runs.create({
-        setupId: selectedSetup,
+        providerId: selectedProvider,
         scenarioId: selectedScenario,
       });
       setRun(newRun);
-
-      const startTime = Date.now();
-      timerRef.current = setInterval(() => {
-        setElapsedMs(Date.now() - startTime);
-      }, 500);
-
-      const unsub = subscribeSSE(`/api/runs/${newRun.id}/stream`, {
-        onMessage: (event) => {
-          try {
-            const data = JSON.parse(event.data as string) as Record<string, unknown>;
-            const type = data.type as string | undefined;
-
-            switch (type) {
-              case 'status':
-                setRun((prev) => prev ? { ...prev, status: data.status as Run['status'] } : prev);
-                break;
-              case 'runComplete': {
-                const completedRun = data.run as Run;
-                setRun(completedRun);
-                if (timerRef.current) {
-                  clearInterval(timerRef.current);
-                  timerRef.current = null;
-                }
-                unsub();
-                unsubRef.current = null;
-                navigate(`/runs/${completedRun.id}`);
-                break;
-              }
-              default:
-                // SDK message
-                setMessages((prev) => [...prev, data as SDKMessageRecord]);
-                break;
-            }
-          } catch {
-            // Ignore parse errors from SSE
-          }
-        },
-        onError: () => {
-          unsub();
-          unsubRef.current = null;
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-        },
-      });
-      unsubRef.current = unsub;
+      setSseUrl(`/api/runs/${newRun.id}/stream`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start run');
     } finally {
       setStarting(false);
     }
-  }, [selectedSetup, selectedScenario, navigate]);
+  }, [selectedProvider, selectedScenario]);
 
   const handleAbort = useCallback(() => {
-    unsubRef.current?.();
-    unsubRef.current = null;
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    setSseUrl(null);
     if (run) {
       setRun({ ...run, status: 'cancelled' });
     }
@@ -126,7 +77,7 @@ export function RunPage(): React.JSX.Element {
     <div className="h-full flex flex-col">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">New Run</h1>
-        <p className="text-on-surface-variant text-sm">Execute a test scenario against a setup configuration.</p>
+        <p className="text-on-surface-variant text-sm">Execute a test scenario against a provider configuration.</p>
       </div>
 
       {error && (
@@ -139,10 +90,10 @@ export function RunPage(): React.JSX.Element {
         {/* Left panel: controls */}
         <div className="w-full lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto">
           <div>
-            <label className={labelCls}>Execution Setup</label>
-            <select className={selectCls} value={selectedSetup} onChange={(e) => setSelectedSetup(e.target.value)} disabled={isRunning}>
-              {setups.length === 0 && <option value="">No setups available</option>}
-              {setups.map((s) => (
+            <label className={labelCls}>API Provider</label>
+            <select className={selectCls} value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value)} disabled={isRunning}>
+              {providers.length === 0 && <option value="">No providers available</option>}
+              {providers.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -161,7 +112,7 @@ export function RunPage(): React.JSX.Element {
           <button
             type="button"
             onClick={() => void startRun()}
-            disabled={starting || isRunning || !selectedSetup || !selectedScenario}
+            disabled={starting || isRunning || !selectedProvider || !selectedScenario}
             className="w-full bg-primary-container text-on-primary-container py-2.5 rounded-full font-bold text-sm hover:bg-primary transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {starting ? (
@@ -194,7 +145,7 @@ export function RunPage(): React.JSX.Element {
           <div className="flex-1 overflow-y-auto">
             {!run ? (
               <div className="flex items-center justify-center h-full text-on-surface-variant/50 text-sm">
-                Select a setup and scenario, then click Start Run.
+                Select a provider and scenario, then click Start Run.
               </div>
             ) : (
               <MessageLog messages={messages} loading={isRunning && messages.length === 0} />

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Map setup types to SDK option types for agents and MCP servers
+// Map scenario types to SDK option types for agents and MCP servers
 // ---------------------------------------------------------------------------
 
 import fs from 'node:fs/promises';

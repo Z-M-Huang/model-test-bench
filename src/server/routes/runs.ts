@@ -9,7 +9,7 @@ import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
 import type { IRunner, RunCallbacks } from '../interfaces/runner.js';
 import type { IEvaluator, EvaluationCallbacks } from '../interfaces/evaluator.js';
-import type { Run, RunStatus, TestSetup, Evaluation, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
+import type { Run, RunStatus, Provider, Evaluation, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
 import { handleSSEConnection, broadcastSSE, closeSSE } from './run-sse.js';
 import type { SSESubscriberMap } from './run-sse.js';
 import { EvalQueue } from './eval-queue.js';
@@ -29,10 +29,10 @@ function runSummary(run: Run): Omit<Run, 'messages'> & { messages?: undefined } 
   return rest;
 }
 
-/** Build EvaluatorConfig[] from reviewer setup snapshots. N-1 as Evaluators, last as Synthesizer. */
-function buildEvaluatorConfigs(reviewerSnapshots: readonly TestSetup[]): EvaluatorConfig[] {
-  return reviewerSnapshots.map((setup, idx) => ({
-    provider: setup.provider,
+/** Build EvaluatorConfig[] from reviewer provider snapshots. N-1 as Evaluators, last as Synthesizer. */
+function buildEvaluatorConfigs(reviewerSnapshots: readonly Provider[]): EvaluatorConfig[] {
+  return reviewerSnapshots.map((p, idx) => ({
+    provider: p.provider,
     role: idx < reviewerSnapshots.length - 1
       ? (reviewerSnapshots.length > 2 ? `Evaluator ${idx + 1}` : 'Evaluator')
       : 'Synthesizer',
@@ -70,17 +70,17 @@ export function createRunRoutes(
   router.post('/', async (req: Request, res: Response) => {
     try {
       const body = req.body as Record<string, unknown>;
-      const setupId = body.setupId as string | undefined;
+      const providerId = body.providerId as string | undefined;
       const scenarioId = body.scenarioId as string | undefined;
 
-      if (!setupId || !scenarioId) {
-        res.status(400).json({ error: 'setupId and scenarioId are required' });
+      if (!providerId || !scenarioId) {
+        res.status(400).json({ error: 'providerId and scenarioId are required' });
         return;
       }
 
-      const setup = await storage.getSetup(setupId);
-      if (!setup) {
-        res.status(404).json({ error: 'Setup not found' });
+      const provider = await storage.getProvider(providerId);
+      if (!provider) {
+        res.status(404).json({ error: 'Provider not found' });
         return;
       }
 
@@ -90,25 +90,25 @@ export function createRunRoutes(
         return;
       }
 
-      // Optional reviewer setups for auto-evaluation
-      const rawReviewerIds = body.reviewerSetupIds;
-      let reviewerSetupIds: string[] | undefined;
-      let reviewerSetupSnapshots: TestSetup[] | undefined;
+      // Optional reviewer providers for auto-evaluation
+      const rawReviewerIds = body.reviewerProviderIds;
+      let reviewerProviderIds: string[] | undefined;
+      let reviewerProviderSnapshots: Provider[] | undefined;
       if (Array.isArray(rawReviewerIds) && rawReviewerIds.length > 0) {
-        reviewerSetupIds = [];
-        reviewerSetupSnapshots = [];
+        reviewerProviderIds = [];
+        reviewerProviderSnapshots = [];
         for (const rid of rawReviewerIds) {
           if (typeof rid !== 'string') {
-            res.status(400).json({ error: 'reviewerSetupIds must be an array of strings' });
+            res.status(400).json({ error: 'reviewerProviderIds must be an array of strings' });
             return;
           }
-          const reviewerSetup = await storage.getSetup(rid);
-          if (!reviewerSetup) {
-            res.status(404).json({ error: `Reviewer setup not found: ${rid}` });
+          const reviewerProvider = await storage.getProvider(rid);
+          if (!reviewerProvider) {
+            res.status(404).json({ error: `Reviewer provider not found: ${rid}` });
             return;
           }
-          reviewerSetupIds.push(rid);
-          reviewerSetupSnapshots.push(reviewerSetup);
+          reviewerProviderIds.push(rid);
+          reviewerProviderSnapshots.push(reviewerProvider);
         }
       }
 
@@ -119,18 +119,18 @@ export function createRunRoutes(
       const now = new Date().toISOString();
       const run: Run = {
         id: uuidv4(),
-        setupId,
+        providerId,
         scenarioId,
         status: 'pending',
-        setupSnapshot: setup,
+        providerSnapshot: provider,
         scenarioSnapshot: scenario,
         messages: [],
         resultText: '',
         totalCostUsd: 0,
         durationMs: 0,
         numTurns: 0,
-        reviewerSetupIds,
-        reviewerSetupSnapshots,
+        reviewerProviderIds,
+        reviewerProviderSnapshots,
         maxEvalRounds,
         createdAt: now,
         updatedAt: now,
@@ -167,16 +167,16 @@ export function createRunRoutes(
           };
 
           try {
-            const result = await runner.executeRun(setup, scenario, run, callbacks, abortController);
+            const result = await runner.executeRun(provider, scenario, run, callbacks, abortController);
             await storage.saveRun(result);
 
             // Broadcast completed/failed run to SSE clients
             broadcastSSE(run.id, 'message', { type: 'runComplete', run: runSummary(result) }, sseSubscribers);
 
-            // Auto-trigger evaluation if reviewer setups were configured
-            if (result.status === 'completed' && evaluator && reviewerSetupSnapshots && reviewerSetupSnapshots.length > 0) {
+            // Auto-trigger evaluation if reviewer providers were configured
+            if (result.status === 'completed' && evaluator && reviewerProviderSnapshots && reviewerProviderSnapshots.length > 0) {
               try {
-                const evaluatorConfigs = buildEvaluatorConfigs(reviewerSetupSnapshots);
+                const evaluatorConfigs = buildEvaluatorConfigs(reviewerProviderSnapshots);
                 const evalRequest: EvaluationRequest = {
                   runId: result.id,
                   evaluators: evaluatorConfigs,
@@ -237,11 +237,12 @@ export function createRunRoutes(
                         });
                       },
                       onProgress() { /* progress not streamed on run SSE */ },
+                      onMessage() { /* SDK messages not streamed on run SSE */ },
                     };
 
                     try {
                       const evalResult = await evaluator.evaluateRun(
-                        linkedRun, scenario, setup, evalRequest, evalCallbacks,
+                        linkedRun, scenario, provider, evalRequest, evalCallbacks,
                       );
                       const finalEval: Evaluation = {
                         ...evalResult,
@@ -295,7 +296,7 @@ export function createRunRoutes(
           } finally {
             abortControllers.delete(run.id);
             // Don't close SSE yet if evaluation is running — it will close when eval completes
-            if (!reviewerSetupSnapshots || reviewerSetupSnapshots.length === 0) {
+            if (!reviewerProviderSnapshots || reviewerProviderSnapshots.length === 0) {
               closeSSE(run.id, sseSubscribers);
             }
           }
@@ -313,7 +314,7 @@ export function createRunRoutes(
   router.get('/', async (req: Request, res: Response) => {
     try {
       const filter: Record<string, string | undefined> = {};
-      if (typeof req.query.setupId === 'string') filter.setupId = req.query.setupId;
+      if (typeof req.query.providerId === 'string') filter.providerId = req.query.providerId;
       if (typeof req.query.scenarioId === 'string') filter.scenarioId = req.query.scenarioId;
 
       const runs = await storage.listRuns(filter);

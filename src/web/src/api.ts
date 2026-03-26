@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type {
-  TestSetup,
+  Provider,
   Scenario,
   Run,
   RunStatus,
@@ -50,7 +50,7 @@ function del<T = void>(path: string) {
 // -- Filters -----------------------------------------------------------------
 
 export interface RunFilters {
-  setupId?: string;
+  providerId?: string;
   scenarioId?: string;
   status?: RunStatus;
 }
@@ -70,13 +70,13 @@ function toQuery(params: Record<string, string | undefined>): string {
 // -- API object --------------------------------------------------------------
 
 export const api = {
-  setups: {
-    list: () => get<TestSetup[]>('/api/setups'),
-    get: (id: string) => get<TestSetup>(`/api/setups/${id}`),
-    create: (data: Partial<TestSetup>) => post<TestSetup>('/api/setups', data),
-    update: (id: string, data: Partial<TestSetup>) =>
-      put<TestSetup>(`/api/setups/${id}`, data),
-    delete: (id: string) => del(`/api/setups/${id}`),
+  providers: {
+    list: () => get<Provider[]>('/api/providers'),
+    get: (id: string) => get<Provider>(`/api/providers/${id}`),
+    create: (data: Partial<Provider>) => post<Provider>('/api/providers', data),
+    update: (id: string, data: Partial<Provider>) =>
+      put<Provider>(`/api/providers/${id}`, data),
+    delete: (id: string) => del(`/api/providers/${id}`),
   },
 
   scenarios: {
@@ -95,7 +95,7 @@ export const api = {
     get: (id: string) => get<Run>(`/api/runs/${id}`),
     getSummary: (id: string) =>
       get<{ run: Run; evaluation?: Evaluation }>(`/api/runs/${id}/summary`),
-    create: (body: { setupId: string; scenarioId: string; reviewerSetupIds?: string[]; maxEvalRounds?: number }) =>
+    create: (body: { providerId: string; scenarioId: string; reviewerProviderIds?: string[]; maxEvalRounds?: number }) =>
       post<Run>('/api/runs', body),
     delete: (id: string) => del(`/api/runs/${id}`),
   },

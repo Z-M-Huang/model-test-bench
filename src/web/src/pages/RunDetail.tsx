@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import type { Run } from '../types.js';
+import type { Run, Evaluation } from '../types.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { MessageLog } from '../components/MessageLog.js';
 
@@ -37,17 +37,28 @@ function CollapsiblePanel({ title, icon, children }: { title: string; icon: stri
   );
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export function RunDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [run, setRun] = useState<Run | null>(null);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    api.runs.get(id)
-      .then(setRun)
+    Promise.all([
+      api.runs.get(id),
+      api.evaluations.list({ runId: id }),
+    ])
+      .then(([r, evals]) => {
+        setRun(r);
+        setEvaluations([...evals].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load run'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -68,7 +79,7 @@ export function RunDetail(): React.JSX.Element {
     );
   }
 
-  const setup = run.setupSnapshot;
+  const providerSnap = run.providerSnapshot;
   const scenario = run.scenarioSnapshot;
 
   return (
@@ -90,7 +101,7 @@ export function RunDetail(): React.JSX.Element {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-surface-container-low p-4 rounded-md">
           <div className="text-[0.65rem] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Status</div>
           <StatusBadge status={run.status} />
@@ -98,14 +109,6 @@ export function RunDetail(): React.JSX.Element {
         <div className="bg-surface-container-low p-4 rounded-md">
           <div className="text-[0.65rem] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Duration</div>
           <div className="text-lg font-mono font-bold text-on-surface">{formatDuration(run.durationMs)}</div>
-        </div>
-        <div className="bg-surface-container-low p-4 rounded-md">
-          <div className="text-[0.65rem] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Turns</div>
-          <div className="text-lg font-mono font-bold text-on-surface">{run.numTurns}</div>
-        </div>
-        <div className="bg-surface-container-low p-4 rounded-md">
-          <div className="text-[0.65rem] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Cost</div>
-          <div className="text-lg font-mono font-bold text-on-surface">${run.totalCostUsd.toFixed(4)}</div>
         </div>
       </div>
 
@@ -134,14 +137,14 @@ export function RunDetail(): React.JSX.Element {
         </div>
       )}
 
-      {/* Setup Snapshot */}
-      <CollapsiblePanel title="Setup Snapshot" icon="settings_input_component">
+      {/* Provider Snapshot */}
+      <CollapsiblePanel title="Provider Snapshot" icon="settings_input_component">
         <div className="space-y-2 text-xs">
-          <div><span className="text-on-surface-variant">Name:</span> <span className="text-on-surface font-medium">{setup.name}</span></div>
-          <div><span className="text-on-surface-variant">Model:</span> <span className="text-on-surface font-mono">{setup.provider.model}</span></div>
-          <div><span className="text-on-surface-variant">Provider:</span> <span className="text-on-surface">{setup.provider.kind}</span></div>
-          <div><span className="text-on-surface-variant">Timeout:</span> <span className="text-on-surface font-mono">{setup.timeoutSeconds}s</span></div>
-          {setup.effort && <div><span className="text-on-surface-variant">Effort:</span> <span className="text-on-surface capitalize">{setup.effort}</span></div>}
+          <div><span className="text-on-surface-variant">Name:</span> <span className="text-on-surface font-medium">{providerSnap.name}</span></div>
+          <div><span className="text-on-surface-variant">Model:</span> <span className="text-on-surface font-mono">{providerSnap.provider.model}</span></div>
+          <div><span className="text-on-surface-variant">Provider:</span> <span className="text-on-surface">{providerSnap.provider.kind}</span></div>
+          <div><span className="text-on-surface-variant">Timeout:</span> <span className="text-on-surface font-mono">{providerSnap.timeoutSeconds}s</span></div>
+          {providerSnap.effort && <div><span className="text-on-surface-variant">Effort:</span> <span className="text-on-surface capitalize">{providerSnap.effort}</span></div>}
         </div>
       </CollapsiblePanel>
 
@@ -170,6 +173,41 @@ export function RunDetail(): React.JSX.Element {
           )}
         </div>
       </CollapsiblePanel>
+
+      {/* Previous Evaluations */}
+      {evaluations.length > 0 && (
+        <div className="bg-surface-container-low rounded-lg border border-outline-variant/5 overflow-hidden">
+          <div className="px-4 py-3 bg-surface-container border-b border-outline-variant/10">
+            <h2 className="text-sm font-bold text-on-surface">Previous Evaluations</h2>
+          </div>
+          <div className="divide-y divide-outline-variant/10">
+            {evaluations.map((ev) => (
+              <button
+                key={ev.id}
+                type="button"
+                onClick={() => navigate(`/evaluations/${ev.id}`)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-container-high/50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={ev.status} />
+                  <span className="text-xs text-on-surface font-mono">
+                    {ev.evaluators[0]?.provider.model ?? 'unknown'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  {ev.status === 'completed' && (
+                    <span className="text-sm font-bold text-on-surface">
+                      {ev.synthesis.weightedTotal.toFixed(1)}/10
+                    </span>
+                  )}
+                  <span className="text-xs text-on-surface-variant">{formatDate(ev.createdAt)}</span>
+                  <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '1rem' }}>chevron_right</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Evaluate button */}
       {run.status === 'completed' && (

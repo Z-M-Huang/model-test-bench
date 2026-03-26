@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import type { TestSetup, Scenario, Run } from '../types.js';
+import type { Provider, Scenario, Run } from '../types.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 
 function formatDuration(ms: number): string {
@@ -13,18 +13,18 @@ function formatDuration(ms: number): string {
 
 export function Dashboard(): React.JSX.Element {
   const navigate = useNavigate();
-  const [setups, setSetups] = useState<TestSetup[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      api.setups.list().catch(() => [] as TestSetup[]),
+      api.providers.list().catch(() => [] as Provider[]),
       api.scenarios.list().catch(() => [] as Scenario[]),
       api.runs.list().catch(() => [] as Run[]),
     ]).then(([s, sc, r]) => {
-      setSetups(s);
+      setProviders(s);
       setScenarios(sc);
       setRuns(r);
       setLoading(false);
@@ -34,7 +34,7 @@ export function Dashboard(): React.JSX.Element {
   const recentRuns = runs.slice(0, 5);
 
   const stats = [
-    { label: 'Total Setups', value: setups.length, icon: 'settings_suggest' },
+    { label: 'Total Providers', value: providers.length, icon: 'settings_suggest' },
     { label: 'Total Scenarios', value: scenarios.length, icon: 'account_tree' },
     { label: 'Total Runs', value: runs.length, icon: 'rocket_launch' },
   ];
@@ -76,9 +76,9 @@ export function Dashboard(): React.JSX.Element {
       {/* Quick Start Cards */}
       <div className="grid grid-cols-1 gap-6 mb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* New Setup */}
+          {/* New Provider */}
           <div
-            onClick={() => navigate('/setups/new')}
+            onClick={() => navigate('/providers/new')}
             className="relative overflow-hidden group rounded-xl p-6 bg-surface-container-high border border-outline-variant/10 hover:border-primary/30 transition-all cursor-pointer"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -90,13 +90,13 @@ export function Dashboard(): React.JSX.Element {
               <div className="bg-primary-container/20 p-2 w-fit rounded-lg mb-4">
                 <span className="material-symbols-outlined text-primary">add_circle</span>
               </div>
-              <h3 className="text-lg font-bold text-on-surface mb-2">New Setup</h3>
+              <h3 className="text-lg font-bold text-on-surface mb-2">New Provider</h3>
               <p className="text-on-surface-variant text-sm mb-6 flex-1">
                 Configure environment variables, model parameters, and adapter weights for a new
                 test environment.
               </p>
               <span className="text-primary text-[0.7rem] font-bold flex items-center gap-1">
-                INITIALIZE SETUP{' '}
+                INITIALIZE PROVIDER{' '}
                 <span className="material-symbols-outlined text-[0.9rem]">arrow_forward</span>
               </span>
             </div>
@@ -114,7 +114,7 @@ export function Dashboard(): React.JSX.Element {
               </div>
               <h3 className="text-lg font-bold text-on-surface mb-2">Start Run</h3>
               <p className="text-on-surface-variant text-sm mb-6 flex-1">
-                Execute a batch process using an existing setup and scenario. Real-time logging will
+                Execute a batch process using an existing provider and scenario. Real-time logging will
                 be enabled.
               </p>
               <span className="text-on-surface text-[0.7rem] font-bold flex items-center gap-1">
@@ -142,7 +142,7 @@ export function Dashboard(): React.JSX.Element {
             <thead className="bg-surface-container-low text-[0.65rem] text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/10">
               <tr>
                 <th className="px-6 py-3 font-semibold">Status</th>
-                <th className="px-6 py-3 font-semibold">Setup Name</th>
+                <th className="px-6 py-3 font-semibold">Provider</th>
                 <th className="px-6 py-3 font-semibold">Scenario Name</th>
                 <th className="px-6 py-3 font-semibold">Duration</th>
                 <th className="px-6 py-3 font-semibold">Turns</th>
@@ -175,7 +175,7 @@ export function Dashboard(): React.JSX.Element {
                     <StatusBadge status={run.status} />
                   </td>
                   <td className="px-6 py-4 font-mono text-on-surface">
-                    {run.setupSnapshot?.name ?? run.setupId}
+                    {run.providerSnapshot?.name ?? run.providerId}
                   </td>
                   <td className="px-6 py-4 text-on-surface-variant">
                     {run.scenarioSnapshot?.name ?? run.scenarioId}

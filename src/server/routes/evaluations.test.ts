@@ -6,14 +6,14 @@ import type { IStorage } from '../interfaces/storage.js';
 import type { IEvaluator } from '../interfaces/evaluator.js';
 import type { ILogger } from '../interfaces/logger.js';
 import type { Evaluation, Run } from '../types/index.js';
-import { makeSetup, makeScenario, createMockStorage, createMockLogger } from './route-test-helpers.js';
+import { makeProvider, makeScenario, createMockStorage, createMockLogger } from './route-test-helpers.js';
 
 // Helpers
 
 const TS = '2026-01-01T00:00:00.000Z';
 const mkRun = (o: Partial<Run> = {}): Run => ({
-  id: 'run-1', setupId: 'setup-1', scenarioId: 'scenario-1', status: 'completed',
-  setupSnapshot: makeSetup(), scenarioSnapshot: makeScenario(), messages: [],
+  id: 'run-1', providerId: 'provider-1', scenarioId: 'scenario-1', status: 'completed',
+  providerSnapshot: makeProvider(), scenarioSnapshot: makeScenario(), messages: [],
   resultText: 'done', totalCostUsd: 0.01, durationMs: 1000, numTurns: 3,
   createdAt: TS, updatedAt: TS, ...o,
 });
@@ -30,15 +30,15 @@ const mkEval = (o: Partial<Evaluation> = {}): Evaluation => ({
 });
 
 const mkMockEvaluator = (): IEvaluator => ({
-  evaluateRun: vi.fn().mockImplementation((_run, _sc, _su, _req, cb) => {
-    cb.onStatusChange('running'); cb.onProgress('scoring'); cb.onStatusChange('completed');
+  evaluateRun: vi.fn().mockImplementation((_run, _sc, _pr, _req, cb) => {
+    cb.onStatusChange('running'); cb.onProgress('scoring'); cb.onMessage({ phase: 'score', evaluatorRole: 'primary', roundNumber: 1 }, { timestamp: TS, message: {} }); cb.onStatusChange('completed');
     return Promise.resolve(mkEval());
   }),
 });
 
 const validBody = () => ({
   role: 'primary',
-  setupId: 'setup-1',
+  providerId: 'provider-1',
 });
 
 function createApp(storage: IStorage, evaluator: IEvaluator, logger: ILogger, queue?: EvalQueue) {
@@ -67,7 +67,7 @@ describe('Evaluation routes', () => {
   describe('POST /api/evaluations', () => {
     it('creates an evaluation and returns 202', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       vi.mocked(storage.saveEvaluation).mockResolvedValue(undefined);
 
       const res = await request(app)
@@ -82,7 +82,7 @@ describe('Evaluation routes', () => {
 
     it('starts evaluation asynchronously', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       vi.mocked(storage.saveEvaluation).mockResolvedValue(undefined);
 
       await request(app)
@@ -131,14 +131,14 @@ describe('Evaluation routes', () => {
         .post('/api/evaluations')
         .send({
           runId: 'run-1',
-          evaluators: [{ setupId: 'setup-1' }],
+          evaluators: [{ providerId: 'provider-1' }],
         });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('role');
     });
 
-    it('returns 400 when evaluator is missing setupId', async () => {
+    it('returns 400 when evaluator is missing providerId', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
 
       const res = await request(app)
@@ -149,24 +149,24 @@ describe('Evaluation routes', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('setupId');
+      expect(res.body.error).toContain('providerId');
     });
 
-    it('returns 404 when evaluator setup does not exist', async () => {
+    it('returns 404 when evaluator provider does not exist', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
-      vi.mocked(storage.getSetup).mockResolvedValue(undefined);
+      vi.mocked(storage.getProvider).mockResolvedValue(undefined);
 
       const res = await request(app)
         .post('/api/evaluations')
         .send({ runId: 'run-1', evaluators: [validBody()] });
 
       expect(res.status).toBe(404);
-      expect(res.body.error).toContain('Setup not found');
+      expect(res.body.error).toContain('Provider not found');
     });
 
     it('returns 400 when maxRounds is out of range', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
 
       const res = await request(app)
         .post('/api/evaluations')
@@ -178,7 +178,7 @@ describe('Evaluation routes', () => {
 
     it('returns 400 when maxRounds is 0', async () => {
       vi.mocked(storage.getRun).mockResolvedValue(mkRun());
-      vi.mocked(storage.getSetup).mockResolvedValue(makeSetup());
+      vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
 
       const res = await request(app)
         .post('/api/evaluations')

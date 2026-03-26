@@ -5,7 +5,7 @@ import {
   buildDebatePrompt,
   buildSynthesisPrompt,
 } from './eval-prompts.js';
-import { makeScenario, makeSetup } from './storage-test-helpers.js';
+import { makeScenario, makeProvider } from './storage-test-helpers.js';
 import type { TranscriptSummary } from './transcript-formatter.js';
 
 function mkSummary(overrides: Partial<TranscriptSummary> = {}): TranscriptSummary {
@@ -133,12 +133,12 @@ describe('buildDebatePrompt', () => {
 });
 
 describe('buildSynthesisPrompt', () => {
-  it('formats all evaluations and setup details', () => {
+  it('formats all evaluations and provider details', () => {
     const evals = [
       { evaluatorRole: 'primary', dimension: 'quality', score: 8, reasoning: 'Good' },
     ];
-    const prompt = buildSynthesisPrompt(evals, makeScenario(), makeSetup());
+    const prompt = buildSynthesisPrompt(evals, makeScenario(), makeProvider());
     expect(prompt).toContain('[primary] quality: 8/10');
-    expect(prompt).toContain('Test Setup');
+    expect(prompt).toContain('Test Provider');
   });
 });

@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout.js';
 import { Dashboard } from './pages/Dashboard.js';
-import { SetupList } from './pages/SetupList.js';
-import { SetupEditor } from './pages/SetupEditor.js';
+import { ProviderList } from './pages/ProviderList.js';
+import { ProviderEditor } from './pages/ProviderEditor.js';
 import { ScenarioList } from './pages/ScenarioList.js';
 import { ScenarioEditor } from './pages/ScenarioEditor.js';
 import { RunPage } from './pages/RunPage.js';
@@ -17,9 +17,9 @@ export function App(): React.JSX.Element {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/setups" element={<SetupList />} />
-          <Route path="/setups/new" element={<SetupEditor />} />
-          <Route path="/setups/:id/edit" element={<SetupEditor />} />
+          <Route path="/providers" element={<ProviderList />} />
+          <Route path="/providers/new" element={<ProviderEditor />} />
+          <Route path="/providers/:id/edit" element={<ProviderEditor />} />
           <Route path="/scenarios" element={<ScenarioList />} />
           <Route path="/scenarios/new" element={<ScenarioEditor />} />
           <Route path="/scenarios/:id" element={<ScenarioEditor />} />

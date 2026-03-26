@@ -28,9 +28,9 @@ export interface ScoringDimension {
   readonly description: string;
 }
 
-// -- Setup -------------------------------------------------------------------
+// -- Provider ----------------------------------------------------------------
 
-export interface TestSetup {
+export interface Provider {
   readonly id: string;
   readonly name: string;
   readonly description: string;
@@ -104,10 +104,10 @@ export interface SDKMessageRecord {
 
 export interface Run {
   readonly id: string;
-  readonly setupId: string;
+  readonly providerId: string;
   readonly scenarioId: string;
   readonly status: RunStatus;
-  readonly setupSnapshot: TestSetup;
+  readonly providerSnapshot: Provider;
   readonly scenarioSnapshot: Scenario;
   readonly messages: readonly SDKMessageRecord[];
   readonly resultText: string;
@@ -115,8 +115,8 @@ export interface Run {
   readonly durationMs: number;
   readonly numTurns: number;
   readonly error?: string;
-  readonly reviewerSetupIds?: readonly string[];
-  readonly reviewerSetupSnapshots?: readonly TestSetup[];
+  readonly reviewerProviderIds?: readonly string[];
+  readonly reviewerProviderSnapshots?: readonly Provider[];
   readonly maxEvalRounds?: number;
   readonly evaluationId?: string;
   readonly createdAt: string;
@@ -139,10 +139,10 @@ export interface EvaluationRequest {
   readonly maxBudgetUsd?: number;
 }
 
-/** Body sent to POST /api/evaluations (setupId-based, keys resolved server-side). */
+/** Body sent to POST /api/evaluations (providerId-based, keys resolved server-side). */
 export interface CreateEvaluationBody {
   readonly runId: string;
-  readonly evaluators: readonly { setupId: string; role: string }[];
+  readonly evaluators: readonly { providerId: string; role: string }[];
   readonly maxRounds: number;
 }
 

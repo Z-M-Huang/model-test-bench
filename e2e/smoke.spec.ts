@@ -17,7 +17,7 @@ test.describe('Smoke tests', () => {
   });
 
   test('all main routes return 200 (SPA fallback)', async ({ request }) => {
-    const routes = ['/', '/setups', '/setups/new', '/scenarios', '/scenarios/new', '/run', '/history'];
+    const routes = ['/', '/providers', '/providers/new', '/scenarios', '/scenarios/new', '/run', '/history'];
     for (const route of routes) {
       const res = await request.get(route);
       expect(res.status(), `Expected 200 for ${route}`).toBe(200);
@@ -26,7 +26,7 @@ test.describe('Smoke tests', () => {
 
   test('API endpoints return JSON arrays', async ({ request }) => {
     // /api/runs and /api/evaluations may 404 when runner/evaluator not configured (no API key)
-    const alwaysAvailable = ['/api/setups', '/api/scenarios'];
+    const alwaysAvailable = ['/api/providers', '/api/scenarios'];
     for (const endpoint of alwaysAvailable) {
       const res = await request.get(endpoint);
       expect(res.status(), `Expected 200 for ${endpoint}`).toBe(200);

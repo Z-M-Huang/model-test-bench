@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import type { TestSetup } from '../types.js';
+import type { Provider } from '../types.js';
 
 function maskKey(key: string): string {
   if (key.length <= 6) return '****';
@@ -22,22 +22,22 @@ const rowIcons: { icon: string; color: string }[] = [
   { icon: 'security', color: 'bg-secondary/10 text-secondary' },
 ];
 
-export function SetupList(): React.JSX.Element {
+export function ProviderList(): React.JSX.Element {
   const navigate = useNavigate();
-  const [setups, setSetups] = useState<TestSetup[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.setups
+    api.providers
       .list()
-      .then(setSetups)
-      .catch(() => setSetups([]))
+      .then(setProviders)
+      .catch(() => setProviders([]))
       .finally(() => setLoading(false));
   }, []);
 
   function handleDelete(id: string) {
-    if (!confirm('Delete this setup?')) return;
-    api.setups.delete(id).then(() => setSetups((prev) => prev.filter((s) => s.id !== id)));
+    if (!confirm('Delete this provider?')) return;
+    api.providers.delete(id).then(() => setProviders((prev) => prev.filter((s) => s.id !== id)));
   }
 
   return (
@@ -45,17 +45,17 @@ export function SetupList(): React.JSX.Element {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-on-surface">Test Setups</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-on-surface">Providers</h2>
           <p className="text-xs text-on-surface-variant mt-1">
             Configure and manage your LLM provider integration parameters.
           </p>
         </div>
         <button
-          onClick={() => navigate('/setups/new')}
+          onClick={() => navigate('/providers/new')}
           className="bg-gradient-to-br from-primary-container to-primary hover:opacity-90 text-on-primary-container font-semibold px-5 py-2 rounded-full text-xs flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary-container/20"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          New Setup
+          New Provider
         </button>
       </div>
 
@@ -90,24 +90,24 @@ export function SetupList(): React.JSX.Element {
                   </td>
                 </tr>
               )}
-              {!loading && setups.length === 0 && (
+              {!loading && providers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-on-surface-variant">
-                    No setups yet. Create one to get started.
+                    No providers yet. Create one to get started.
                   </td>
                 </tr>
               )}
-              {setups.map((setup, i) => {
+              {providers.map((provider, i) => {
                 const ri = rowIcons[i % rowIcons.length];
                 // The list API returns summary fields (providerType, model) instead of the full provider object.
-                const extra = setup as unknown as Record<string, unknown>;
-                const providerKind = setup.provider?.kind ?? (extra.providerType as string) ?? 'api';
-                const providerModel = setup.provider?.model ?? (extra.model as string) ?? '';
+                const extra = provider as unknown as Record<string, unknown>;
+                const providerKind = provider.provider?.kind ?? (extra.providerType as string) ?? 'api';
+                const providerModel = provider.provider?.model ?? (extra.model as string) ?? '';
                 const isApi = providerKind === 'api';
                 const providerLabel = isApi ? 'Anthropic API' : 'Claude Code Auth';
                 return (
                   <tr
-                    key={setup.id}
+                    key={provider.id}
                     className={`hover:bg-surface-container-highest/40 transition-colors group ${
                       i % 2 === 1 ? 'bg-surface-container-low/20' : ''
                     }`}
@@ -119,10 +119,10 @@ export function SetupList(): React.JSX.Element {
                         </div>
                         <div>
                           <div className="text-[0.8rem] font-semibold text-on-surface">
-                            {setup.name}
+                            {provider.name}
                           </div>
                           <div className="text-[0.65rem] text-on-surface-variant font-mono">
-                            ID: {setup.id.slice(0, 8)}
+                            ID: {provider.id.slice(0, 8)}
                           </div>
                         </div>
                       </div>
@@ -132,13 +132,13 @@ export function SetupList(): React.JSX.Element {
                         <span className="text-[0.7rem] px-2 py-0.5 w-fit rounded-full bg-surface-container-high text-tertiary-fixed-dim border border-outline-variant/20 mb-1">
                           {providerLabel}
                         </span>
-                        {isApi && setup.provider?.kind === 'api' && (
+                        {isApi && provider.provider?.kind === 'api' && (
                           <div className="text-[0.6rem] font-mono text-on-surface-variant flex flex-col">
                             <span>
                               URL:{' '}
-                              {new URL(setup.provider.baseUrl).hostname}
+                              {new URL(provider.provider.baseUrl).hostname}
                             </span>
-                            <span>KEY: {maskKey(setup.provider.apiKey)}</span>
+                            <span>KEY: {maskKey(provider.provider.apiKey)}</span>
                           </div>
                         )}
                       </div>
@@ -149,12 +149,12 @@ export function SetupList(): React.JSX.Element {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[0.75rem] text-on-surface-variant">
-                      {fmtDate(setup.createdAt)}
+                      {fmtDate(provider.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => navigate(`/setups/${setup.id}/edit`)}
+                          onClick={() => navigate(`/providers/${provider.id}/edit`)}
                           className="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant hover:text-on-surface transition-colors"
                           title="Edit"
                         >
@@ -162,9 +162,9 @@ export function SetupList(): React.JSX.Element {
                         </button>
                         <button
                           onClick={() =>
-                            api.setups
-                              .create({ ...setup, name: `${setup.name} (copy)` })
-                              .then((copy) => setSetups((prev) => [...prev, copy]))
+                            api.providers
+                              .create({ ...provider, name: `${provider.name} (copy)` })
+                              .then((copy) => setProviders((prev) => [...prev, copy]))
                           }
                           className="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant hover:text-on-surface transition-colors"
                           title="Duplicate"
@@ -174,7 +174,7 @@ export function SetupList(): React.JSX.Element {
                           </span>
                         </button>
                         <button
-                          onClick={() => handleDelete(setup.id)}
+                          onClick={() => handleDelete(provider.id)}
                           className="p-1.5 hover:bg-error/10 rounded text-on-surface-variant hover:text-error transition-colors"
                           title="Delete"
                         >

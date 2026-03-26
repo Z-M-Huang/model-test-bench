@@ -22,7 +22,7 @@ test.describe('Dashboard page', () => {
   });
 
   test('stats cards render with correct labels', async ({ page }) => {
-    const statsLabels = ['Total Setups', 'Total Scenarios', 'Total Runs'];
+    const statsLabels = ['Total Providers', 'Total Scenarios', 'Total Runs'];
     for (const label of statsLabels) {
       await expect(page.getByText(label)).toBeVisible();
     }
@@ -34,11 +34,11 @@ test.describe('Dashboard page', () => {
   });
 
   test('quick start cards render', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'New Setup' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New Provider' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Start Run' })).toBeVisible();
   });
 
-  test('New Setup card has descriptive text', async ({ page }) => {
+  test('New Provider card has descriptive text', async ({ page }) => {
     await expect(page.getByText('Configure environment variables')).toBeVisible();
   });
 
@@ -50,7 +50,7 @@ test.describe('Dashboard page', () => {
     await expect(page.getByText('Recent Runs')).toBeVisible();
     // Table headers
     await expect(page.getByText('Status').first()).toBeVisible();
-    await expect(page.getByText('Setup Name')).toBeVisible();
+    await expect(page.getByText('Provider Name')).toBeVisible();
     await expect(page.getByText('Scenario Name')).toBeVisible();
   });
 
@@ -67,9 +67,9 @@ test.describe('Dashboard page', () => {
     }
   });
 
-  test('clicking New Setup card navigates to /setups/new', async ({ page }) => {
-    await page.getByRole('heading', { name: 'New Setup' }).click();
-    await expect(page).toHaveURL(/\/setups\/new$/);
+  test('clicking New Provider card navigates to /providers/new', async ({ page }) => {
+    await page.getByRole('heading', { name: 'New Provider' }).click();
+    await expect(page).toHaveURL(/\/providers\/new$/);
   });
 
   test('clicking Start Run card navigates to /run', async ({ page }) => {

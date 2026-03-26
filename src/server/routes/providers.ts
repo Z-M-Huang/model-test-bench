@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Request, Response } from 'express';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { TestSetup, ProviderConfig } from '../types/index.js';
+import type { Provider, ProviderConfig } from '../types/index.js';
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -17,28 +17,28 @@ function maskSecret(value: string): string {
   return '****' + value.slice(-4);
 }
 
-function maskSetup(setup: TestSetup): Record<string, unknown> {
-  const provider = { ...setup.provider };
-  if (provider.kind === 'api') {
+function maskProvider(provider: Provider): Record<string, unknown> {
+  const cfg = { ...provider.provider };
+  if (cfg.kind === 'api') {
     return {
-      ...setup,
-      provider: { ...provider, apiKey: maskSecret(provider.apiKey) },
+      ...provider,
+      provider: { ...cfg, apiKey: maskSecret(cfg.apiKey) },
     };
   }
   // oauth
   return {
-    ...setup,
-    provider: { ...provider, oauthToken: maskSecret(provider.oauthToken) },
+    ...provider,
+    provider: { ...cfg, oauthToken: maskSecret(cfg.oauthToken) },
   };
 }
 
-function maskSetupMetadata(setup: TestSetup): Record<string, unknown> {
+function maskProviderMetadata(provider: Provider): Record<string, unknown> {
   return {
-    id: setup.id,
-    name: setup.name,
-    providerType: setup.provider.kind,
-    model: setup.provider.model,
-    createdAt: setup.createdAt,
+    id: provider.id,
+    name: provider.name,
+    providerType: provider.provider.kind,
+    model: provider.provider.model,
+    createdAt: provider.createdAt,
   };
 }
 
@@ -47,13 +47,13 @@ interface ValidationError {
   readonly message: string;
 }
 
-function validateProviderConfig(provider: unknown): ValidationError[] {
+function validateProviderConfig(providerCfg: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
-  if (typeof provider !== 'object' || provider === null) {
+  if (typeof providerCfg !== 'object' || providerCfg === null) {
     errors.push({ field: 'provider', message: 'provider is required and must be an object' });
     return errors;
   }
-  const p = provider as Record<string, unknown>;
+  const p = providerCfg as Record<string, unknown>;
   if (p.kind !== 'api' && p.kind !== 'oauth') {
     errors.push({ field: 'provider.kind', message: "provider.kind must be 'api' or 'oauth'" });
     return errors;
@@ -77,7 +77,7 @@ function validateProviderConfig(provider: unknown): ValidationError[] {
   return errors;
 }
 
-function validateSetupBody(body: unknown): ValidationError[] {
+function validateProviderBody(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
   if (typeof body !== 'object' || body === null) {
     errors.push({ field: 'body', message: 'Request body must be a JSON object' });
@@ -100,39 +100,39 @@ function validateSetupBody(body: unknown): ValidationError[] {
 
 // ─── Router factory ────────────────────────────────────────────────────
 
-export function createSetupRoutes(storage: IStorage, logger: ILogger): Router {
+export function createProviderRoutes(storage: IStorage, logger: ILogger): Router {
   const router = Router();
 
-  // GET / — list all setups (metadata only)
+  // GET / — list all providers (metadata only)
   router.get('/', async (_req: Request, res: Response) => {
     try {
-      const setups = await storage.listSetups();
-      res.json(setups.map(maskSetupMetadata));
+      const providers = await storage.listProviders();
+      res.json(providers.map(maskProviderMetadata));
     } catch (err) {
-      logger.error('Failed to list setups', { error: String(err) });
-      res.status(500).json({ error: 'Failed to list setups' });
+      logger.error('Failed to list providers', { error: String(err) });
+      res.status(500).json({ error: 'Failed to list providers' });
     }
   });
 
-  // GET /:id — get full setup (with masked secrets)
+  // GET /:id — get full provider (with masked secrets)
   router.get('/:id', async (req: Request, res: Response) => {
     try {
       const id = paramId(req);
-      const setup = await storage.getSetup(id);
-      if (!setup) {
-        res.status(404).json({ error: 'Setup not found' });
+      const provider = await storage.getProvider(id);
+      if (!provider) {
+        res.status(404).json({ error: 'Provider not found' });
         return;
       }
-      res.json(maskSetup(setup));
+      res.json(maskProvider(provider));
     } catch (err) {
-      logger.error('Failed to get setup', { id: paramId(req), error: String(err) });
-      res.status(500).json({ error: 'Failed to get setup' });
+      logger.error('Failed to get provider', { id: paramId(req), error: String(err) });
+      res.status(500).json({ error: 'Failed to get provider' });
     }
   });
 
-  // POST / — create setup
+  // POST / — create provider
   router.post('/', async (req: Request, res: Response) => {
-    const errors = validateSetupBody(req.body);
+    const errors = validateProviderBody(req.body);
     if (errors.length > 0) {
       res.status(400).json({ errors });
       return;
@@ -140,72 +140,72 @@ export function createSetupRoutes(storage: IStorage, logger: ILogger): Router {
     try {
       const body = req.body as Record<string, unknown>;
       const now = new Date().toISOString();
-      const setup: TestSetup = {
+      const provider: Provider = {
         id: uuidv4(),
         name: (body.name as string).trim(),
         description: (body.description as string | undefined) ?? '',
         provider: body.provider as ProviderConfig,
-        thinking: body.thinking as TestSetup['thinking'],
-        effort: body.effort as TestSetup['effort'],
+        thinking: body.thinking as Provider['thinking'],
+        effort: body.effort as Provider['effort'],
         timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : 300,
         createdAt: now,
         updatedAt: now,
       };
-      await storage.saveSetup(setup);
-      res.status(201).json(maskSetup(setup));
+      await storage.saveProvider(provider);
+      res.status(201).json(maskProvider(provider));
     } catch (err) {
-      logger.error('Failed to create setup', { error: String(err) });
-      res.status(500).json({ error: 'Failed to create setup' });
+      logger.error('Failed to create provider', { error: String(err) });
+      res.status(500).json({ error: 'Failed to create provider' });
     }
   });
 
-  // PUT /:id — update setup
+  // PUT /:id — update provider
   router.put('/:id', async (req: Request, res: Response) => {
     try {
       const id = paramId(req);
-      const existing = await storage.getSetup(id);
+      const existing = await storage.getProvider(id);
       if (!existing) {
-        res.status(404).json({ error: 'Setup not found' });
+        res.status(404).json({ error: 'Provider not found' });
         return;
       }
-      const errors = validateSetupBody(req.body);
+      const errors = validateProviderBody(req.body);
       if (errors.length > 0) {
         res.status(400).json({ errors });
         return;
       }
       const body = req.body as Record<string, unknown>;
-      const updated: TestSetup = {
+      const updated: Provider = {
         id: existing.id,
         createdAt: existing.createdAt,
         name: (body.name as string).trim(),
         description: (body.description as string | undefined) ?? '',
         provider: body.provider as ProviderConfig,
-        thinking: body.thinking as TestSetup['thinking'],
-        effort: body.effort as TestSetup['effort'],
+        thinking: body.thinking as Provider['thinking'],
+        effort: body.effort as Provider['effort'],
         timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : 300,
         updatedAt: new Date().toISOString(),
       };
-      await storage.saveSetup(updated);
-      res.json(maskSetup(updated));
+      await storage.saveProvider(updated);
+      res.json(maskProvider(updated));
     } catch (err) {
-      logger.error('Failed to update setup', { id: paramId(req), error: String(err) });
-      res.status(500).json({ error: 'Failed to update setup' });
+      logger.error('Failed to update provider', { id: paramId(req), error: String(err) });
+      res.status(500).json({ error: 'Failed to update provider' });
     }
   });
 
-  // DELETE /:id — delete setup
+  // DELETE /:id — delete provider
   router.delete('/:id', async (req: Request, res: Response) => {
     try {
       const id = paramId(req);
-      const deleted = await storage.deleteSetup(id);
+      const deleted = await storage.deleteProvider(id);
       if (!deleted) {
-        res.status(404).json({ error: 'Setup not found' });
+        res.status(404).json({ error: 'Provider not found' });
         return;
       }
       res.status(204).send();
     } catch (err) {
-      logger.error('Failed to delete setup', { id: paramId(req), error: String(err) });
-      res.status(500).json({ error: 'Failed to delete setup' });
+      logger.error('Failed to delete provider', { id: paramId(req), error: String(err) });
+      res.status(500).json({ error: 'Failed to delete provider' });
     }
   });
 

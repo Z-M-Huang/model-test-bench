@@ -7,7 +7,7 @@ import type { IStorage } from './interfaces/storage.js';
 import type { ILogger } from './interfaces/logger.js';
 import type { IRunner } from './interfaces/runner.js';
 import type { IEvaluator } from './interfaces/evaluator.js';
-import { createSetupRoutes } from './routes/setups.js';
+import { createProviderRoutes } from './routes/providers.js';
 import { createScenarioRoutes } from './routes/scenarios.js';
 import { createRunRoutes } from './routes/runs.js';
 import { createEvaluationRoutes } from './routes/evaluations.js';
@@ -46,7 +46,7 @@ export function createApp(deps: AppDeps): express.Express {
   });
 
   // ─── API routes ──────────────────────────────────────────────────────
-  app.use('/api/setups', createSetupRoutes(deps.storage, deps.logger));
+  app.use('/api/providers', createProviderRoutes(deps.storage, deps.logger));
   app.use('/api/scenarios', createScenarioRoutes(deps.storage, deps.logger));
   if (deps.runner) {
     app.use('/api/runs', createRunRoutes(deps.storage, deps.runner, deps.logger, deps.evaluator));

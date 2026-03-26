@@ -10,7 +10,7 @@ import type {
   ScoringDimension,
   SkillEntry,
   SubagentEntry,
-} from './setup.js';
+} from './provider.js';
 
 /** Built-in category labels for scenarios (behavior/planning focused). */
 export type ScenarioCategory =

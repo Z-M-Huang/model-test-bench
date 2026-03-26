@@ -1,7 +1,7 @@
 {
-  "id": "example-setup-001",
-  "name": "My Anthropic Setup",
-  "description": "Test setup using Claude Sonnet via Anthropic API",
+  "id": "example-provider-001",
+  "name": "My Anthropic Provider",
+  "description": "Provider using Claude Sonnet via Anthropic API",
   "provider": {
     "kind": "api",
     "baseUrl": "https://api.anthropic.com",

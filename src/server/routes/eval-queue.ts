@@ -8,9 +8,9 @@ import type { Evaluation } from '../types/index.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Validated evaluator entry from the request body (setupId-based). */
+/** Validated evaluator entry from the request body (providerId-based). */
 export interface EvalEntry {
-  readonly setupId: string;
+  readonly providerId: string;
   readonly role: string;
 }
 
@@ -19,8 +19,8 @@ export function validateEvalEntry(raw: unknown): EvalEntry | string {
   if (!raw || typeof raw !== 'object') return 'Each evaluator must be an object';
   const obj = raw as Record<string, unknown>;
   if (!obj.role || typeof obj.role !== 'string') return 'Each evaluator must have a string role';
-  if (!obj.setupId || typeof obj.setupId !== 'string') return 'Each evaluator must have a string setupId';
-  return { setupId: obj.setupId as string, role: obj.role as string };
+  if (!obj.providerId || typeof obj.providerId !== 'string') return 'Each evaluator must have a string providerId';
+  return { providerId: obj.providerId as string, role: obj.role as string };
 }
 
 // ---------------------------------------------------------------------------

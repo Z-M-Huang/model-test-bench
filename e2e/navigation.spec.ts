@@ -13,7 +13,7 @@ test.describe('Navigation', () => {
   test.describe('Sidebar navigation links', () => {
     const navItems = [
       { label: 'Dashboard', path: '/' },
-      { label: 'Setups', path: '/setups' },
+      { label: 'Providers', path: '/providers' },
       { label: 'Scenarios', path: '/scenarios' },
       { label: 'New Run', path: '/run' },
       { label: 'Run History', path: '/history' },
@@ -38,12 +38,12 @@ test.describe('Navigation', () => {
       await expect(dashboardLink).toHaveAttribute('aria-current', 'page');
     });
 
-    test('Setups link is active on setups page', async ({ page }) => {
-      await page.goto('/setups');
+    test('Providers link is active on providers page', async ({ page }) => {
+      await page.goto('/providers');
       await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-      const setupsLink = page.locator('aside a[href="/setups"]');
-      await expect(setupsLink).toHaveAttribute('aria-current', 'page');
+      const providersLink = page.locator('aside a[href="/providers"]');
+      await expect(providersLink).toHaveAttribute('aria-current', 'page');
       // Dashboard should not be active
       const dashboardLink = page.locator('aside a[href="/"]');
       await expect(dashboardLink).not.toHaveAttribute('aria-current', 'page');
@@ -64,9 +64,9 @@ test.describe('Navigation', () => {
     await expect(page).toHaveURL(/\/scenarios\/new$/);
   });
 
-  test('New Setup card on dashboard navigates to /setups/new', async ({ page }) => {
-    await page.locator('h3', { hasText: 'New Setup' }).first().click();
-    await expect(page).toHaveURL(/\/setups\/new$/);
+  test('New Provider card on dashboard navigates to /providers/new', async ({ page }) => {
+    await page.locator('h3', { hasText: 'New Provider' }).first().click();
+    await expect(page).toHaveURL(/\/providers\/new$/);
   });
 
   test('Start Run card on dashboard navigates to /run', async ({ page }) => {
@@ -75,24 +75,24 @@ test.describe('Navigation', () => {
   });
 
   test('browser back/forward navigation works', async ({ page }) => {
-    // Navigate Dashboard -> Setups -> Scenarios
-    await page.locator('aside a', { hasText: 'Setups' }).first().click();
-    await expect(page).toHaveURL(/\/setups$/);
+    // Navigate Dashboard -> Providers -> Scenarios
+    await page.locator('aside a', { hasText: 'Providers' }).first().click();
+    await expect(page).toHaveURL(/\/providers$/);
 
     await page.locator('aside a', { hasText: 'Scenarios' }).first().click();
     await expect(page).toHaveURL(/\/scenarios$/);
 
-    // Go back to Setups
+    // Go back to Providers
     await page.goBack();
-    await expect(page).toHaveURL(/\/setups$/);
+    await expect(page).toHaveURL(/\/providers$/);
 
     // Go back to Dashboard
     await page.goBack();
     await expect(page).toHaveURL(/\/$/);
 
-    // Go forward to Setups
+    // Go forward to Providers
     await page.goForward();
-    await expect(page).toHaveURL(/\/setups$/);
+    await expect(page).toHaveURL(/\/providers$/);
 
     // Go forward to Scenarios
     await page.goForward();
@@ -102,8 +102,8 @@ test.describe('Navigation', () => {
   test.describe('Direct URL access', () => {
     const routes = [
       { path: '/', heading: 'Dashboard' },
-      { path: '/setups', heading: 'Test Setups' },
-      { path: '/setups/new', heading: 'New Setup' },
+      { path: '/providers', heading: 'Providers' },
+      { path: '/providers/new', heading: 'New Provider' },
       { path: '/scenarios', heading: 'New Scenario' },
       { path: '/scenarios/new', heading: 'Create New Scenario' },
       { path: '/run', heading: 'New Run' },

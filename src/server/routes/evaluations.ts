@@ -65,7 +65,7 @@ export function createEvaluationRoutes(
         return;
       }
 
-      // Validate evaluator entries (setupId + role)
+      // Validate evaluator entries (providerId + role)
       const rawEvaluators = body.evaluators;
       if (!Array.isArray(rawEvaluators) || rawEvaluators.length === 0) {
         res.status(400).json({ error: 'evaluators must be a non-empty array' });
@@ -82,15 +82,15 @@ export function createEvaluationRoutes(
         entries.push(result);
       }
 
-      // Resolve setupIds to real providers
+      // Resolve providerIds to real providers
       const evaluators: EvaluatorConfig[] = [];
       for (const entry of entries) {
-        const setup = await storage.getSetup(entry.setupId);
-        if (!setup) {
-          res.status(404).json({ error: `Setup not found: ${entry.setupId}` });
+        const providerRecord = await storage.getProvider(entry.providerId);
+        if (!providerRecord) {
+          res.status(404).json({ error: `Provider not found: ${entry.providerId}` });
           return;
         }
-        evaluators.push({ provider: setup.provider, role: entry.role });
+        evaluators.push({ provider: providerRecord.provider, role: entry.role });
       }
 
       // Validate maxRounds
@@ -128,7 +128,7 @@ export function createEvaluationRoutes(
       await storage.saveEvaluation(evaluation);
 
       // Load related data for the evaluator
-      const setup = run.setupSnapshot;
+      const providerSnapshot = run.providerSnapshot;
       const scenario = run.scenarioSnapshot;
 
       evalQueue.enqueue({
@@ -153,10 +153,20 @@ export function createEvaluationRoutes(
             onProgress(step: string, detail?: string) {
               broadcastSSE(evaluation.id, 'message', { type: 'progress', step, detail }, sseSubscribers);
             },
+            onMessage(info, msg) {
+              broadcastSSE(evaluation.id, 'message', {
+                type: 'sdkMessage',
+                phase: info.phase,
+                evaluatorRole: info.evaluatorRole,
+                roundNumber: info.roundNumber,
+                timestamp: msg.timestamp,
+                message: msg.message,
+              }, sseSubscribers);
+            },
           };
 
           try {
-            const result = await evaluator.evaluateRun(run, scenario, setup, evalRequest, callbacks);
+            const result = await evaluator.evaluateRun(run, scenario, providerSnapshot, evalRequest, callbacks);
             const finalEval: Evaluation = {
               ...result,
               id: evaluation.id,

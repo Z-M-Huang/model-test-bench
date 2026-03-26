@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import type { ProviderConfig, TestSetup } from '../types.js';
+import type { ProviderConfig, Provider } from '../types.js';
 import { ProviderConfigEditor } from '../components/ProviderConfig.js';
 import { AdvancedSettings } from '../components/AdvancedSettings.js';
 
@@ -16,7 +16,7 @@ const defaultProvider: ProviderConfig = {
   model: 'claude-sonnet-4-20250514',
 };
 
-export function SetupEditor(): React.JSX.Element {
+export function ProviderEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = !id;
@@ -37,20 +37,20 @@ export function SetupEditor(): React.JSX.Element {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    api.setups.get(id).then((setup) => {
+    api.providers.get(id).then((providerData) => {
       if (cancelled) return;
-      setName(setup.name);
-      setDescription(setup.description);
-      setProvider(setup.provider);
+      setName(providerData.name);
+      setDescription(providerData.description);
+      setProvider(providerData.provider);
       setAdvanced({
-        timeoutSeconds: setup.timeoutSeconds,
-        thinking: setup.thinking ? { ...setup.thinking } : { kind: 'adaptive' },
-        effort: setup.effort ?? 'medium',
+        timeoutSeconds: providerData.timeoutSeconds,
+        thinking: providerData.thinking ? { ...providerData.thinking } : { kind: 'adaptive' },
+        effort: providerData.effort ?? 'medium',
       });
       setLoading(false);
     }).catch((err: unknown) => {
       if (!cancelled) {
-        setError(err instanceof Error ? err.message : 'Failed to load setup');
+        setError(err instanceof Error ? err.message : 'Failed to load provider');
         setLoading(false);
       }
     });
@@ -61,7 +61,7 @@ export function SetupEditor(): React.JSX.Element {
     setSaving(true);
     setError(null);
     try {
-      const payload: Partial<TestSetup> = {
+      const payload: Partial<Provider> = {
         name,
         description,
         provider,
@@ -70,11 +70,11 @@ export function SetupEditor(): React.JSX.Element {
         effort: advanced.effort,
       };
       if (id) {
-        await api.setups.update(id, payload);
+        await api.providers.update(id, payload);
       } else {
-        await api.setups.create(payload);
+        await api.providers.create(payload);
       }
-      navigate('/setups');
+      navigate('/providers');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
@@ -88,7 +88,7 @@ export function SetupEditor(): React.JSX.Element {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-on-surface-variant text-sm animate-pulse">Loading setup...</div>
+        <div className="text-on-surface-variant text-sm animate-pulse">Loading provider...</div>
       </div>
     );
   }
@@ -97,10 +97,10 @@ export function SetupEditor(): React.JSX.Element {
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">
-          {isNew ? 'New Setup' : 'Edit Setup'}
+          {isNew ? 'New Provider' : 'Edit Provider'}
         </h1>
         <p className="text-on-surface-variant text-sm">
-          {isNew ? 'Configure a new test environment.' : `Editing setup ${id}`}
+          {isNew ? 'Configure a new test environment.' : `Editing provider ${id}`}
         </p>
       </div>
 
@@ -119,11 +119,11 @@ export function SetupEditor(): React.JSX.Element {
           </h2>
           <div>
             <label className={labelCls}>Name</label>
-            <input type="text" className={inputCls} value={name} placeholder="my-test-setup" onChange={(e) => setName(e.target.value)} />
+            <input type="text" className={inputCls} value={name} placeholder="my-provider" onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
             <label className={labelCls}>Description</label>
-            <textarea className={inputCls + ' min-h-[60px] resize-y'} value={description} placeholder="Describe this setup..." onChange={(e) => setDescription(e.target.value)} />
+            <textarea className={inputCls + ' min-h-[60px] resize-y'} value={description} placeholder="Describe this provider..." onChange={(e) => setDescription(e.target.value)} />
           </div>
         </section>
 
@@ -152,11 +152,11 @@ export function SetupEditor(): React.JSX.Element {
             {saving && (
               <span className="material-symbols-outlined animate-spin" style={{ fontSize: '1rem' }}>progress_activity</span>
             )}
-            {isNew ? 'Create Setup' : 'Save Changes'}
+            {isNew ? 'Create Provider' : 'Save Changes'}
           </button>
           <button
             type="button"
-            onClick={() => navigate('/setups')}
+            onClick={() => navigate('/providers')}
             className="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors px-4 py-2.5"
           >
             Cancel

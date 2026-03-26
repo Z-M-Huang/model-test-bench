@@ -13,14 +13,14 @@ export type {
   McpStdioConfig,
   OAuthProviderConfig,
   PermissionMode,
+  Provider,
   ProviderConfig,
   RuleEntry,
   ScoringDimension,
   SkillEntry,
   SubagentEntry,
-  TestSetup,
   ThinkingConfig,
-} from './setup.js';
+} from './provider.js';
 
 export type { Scenario, ScenarioCategory, WorkspaceFile } from './scenario.js';
 

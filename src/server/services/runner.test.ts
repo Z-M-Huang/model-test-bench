@@ -4,7 +4,7 @@ import type { IWorkspaceBuilder, WorkspaceResult } from '../interfaces/workspace
 import type { ILogger } from '../interfaces/logger.js';
 import type { RunCallbacks } from '../interfaces/runner.js';
 import type { Run, SDKMessageRecord } from '../types/index.js';
-import { makeSetup, makeScenario, makeRun } from './storage-test-helpers.js';
+import { makeProvider, makeScenario, makeRun } from './storage-test-helpers.js';
 
 // Mock the SDK — must be before importing the runner
 const mockQueryFn = vi.fn();
@@ -99,7 +99,7 @@ describe('ScenarioRunner', () => {
       mockQueryFn.mockReturnValue(createMockQuery(msgs));
       const callbacks = createMockCallbacks();
 
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), callbacks);
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), callbacks);
 
       expect(result.status).toBe('completed');
       expect(result.resultText).toBe('Task completed');
@@ -114,7 +114,7 @@ describe('ScenarioRunner', () => {
   describe('env construction', () => {
     it('passes API provider env vars to the SDK', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       const callArgs = mockQueryFn.mock.calls[0][0] as { options: { env: Record<string, string> } };
       expect(callArgs.options.env['ANTHROPIC_API_KEY']).toBe('sk-test');
@@ -124,10 +124,10 @@ describe('ScenarioRunner', () => {
 
     it('passes OAuth provider env vars to the SDK', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      const setup = makeSetup({
+      const provider = makeProvider({
         provider: { kind: 'oauth', oauthToken: 'test-token', model: 'claude-sonnet-4-6' },
       });
-      await runner.executeRun(setup, makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(provider, makeScenario(), makeTestRun(), createMockCallbacks());
 
       const callArgs = mockQueryFn.mock.calls[0][0] as { options: { env: Record<string, string> } };
       expect(callArgs.options.env['CLAUDE_CODE_OAUTH_TOKEN']).toBe('test-token');
@@ -140,7 +140,7 @@ describe('ScenarioRunner', () => {
       mockQueryFn.mockReturnValue(createMockQuery([errorResult()]));
       const callbacks = createMockCallbacks();
 
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), callbacks);
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), callbacks);
 
       expect(result.status).toBe('failed');
       expect(result.error).toBe('Something went wrong');
@@ -150,7 +150,7 @@ describe('ScenarioRunner', () => {
 
     it('returns failed run on thrown error', async () => {
       mockQueryFn.mockReturnValue((function* () { throw new Error('Network failure'); })());
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       expect(result.status).toBe('failed');
       expect(result.error).toBe('Network failure');
@@ -158,7 +158,7 @@ describe('ScenarioRunner', () => {
 
     it('handles non-Error thrown values', async () => {
       mockQueryFn.mockReturnValue((function* () { throw 'string error'; })());
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       expect(result.status).toBe('failed');
       expect(result.error).toBe('string error');
@@ -166,7 +166,7 @@ describe('ScenarioRunner', () => {
 
     it('returns failed when workspace creation throws', async () => {
       (workspace.createWorkspace as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('disk full'));
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       expect(result.status).toBe('failed');
       expect(result.error).toBe('disk full');
@@ -181,7 +181,7 @@ describe('ScenarioRunner', () => {
       });
 
       const result = await runner.executeRun(
-        makeSetup({ timeoutSeconds: 1 }), makeScenario(), makeTestRun(), createMockCallbacks(),
+        makeProvider({ timeoutSeconds: 1 }), makeScenario(), makeTestRun(), createMockCallbacks(),
       );
 
       expect(result.status).toBe('cancelled');
@@ -192,20 +192,20 @@ describe('ScenarioRunner', () => {
   describe('cleanup', () => {
     it('cleans up workspace on success', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult({ result: 'done', num_turns: 1 })]));
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
       expect(workspace.cleanup).toHaveBeenCalledTimes(1);
     });
 
     it('cleans up workspace on failure', async () => {
       mockQueryFn.mockReturnValue((function* () { throw new Error('boom'); })());
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
       expect(workspace.cleanup).toHaveBeenCalledTimes(1);
     });
 
     it('logs warning if cleanup fails', async () => {
       workspace.cleanup.mockRejectedValue(new Error('rm failed'));
       mockQueryFn.mockReturnValue(createMockQuery([successResult({ result: 'done' })]));
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       expect(logger.warn).toHaveBeenCalledWith(
         'Failed to clean up workspace',
@@ -224,7 +224,7 @@ describe('ScenarioRunner', () => {
       mockQueryFn.mockReturnValue(createMockQuery(msgs));
       const callbacks = createMockCallbacks();
 
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), callbacks);
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), callbacks);
 
       expect(result.messages).toHaveLength(3);
       for (const msg of result.messages) {
@@ -237,7 +237,7 @@ describe('ScenarioRunner', () => {
   describe('SDK options', () => {
     it('passes correct options to the SDK query', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      const setup = makeSetup({
+      const provider = makeProvider({
         thinking: { kind: 'adaptive' }, effort: 'high',
       });
       const scenario = makeScenario({
@@ -245,7 +245,7 @@ describe('ScenarioRunner', () => {
         allowedTools: ['Read', 'Bash'],
       });
 
-      await runner.executeRun(setup, scenario, makeTestRun(), createMockCallbacks());
+      await runner.executeRun(provider, scenario, makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { prompt: string; options: Record<string, unknown> }).options;
       expect(opts.maxTurns).toBe(5);
@@ -264,7 +264,7 @@ describe('ScenarioRunner', () => {
       const scenario = makeScenario({
         subagents: [{ name: 'helper', description: 'Helps', prompt: 'You help.' }],
       });
-      await runner.executeRun(makeSetup(), scenario, makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), scenario, makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.agents).toBeDefined();
@@ -276,7 +276,7 @@ describe('ScenarioRunner', () => {
       const scenario = makeScenario({
         mcpServers: [{ name: 'my-mcp', config: { transport: 'stdio', command: 'cmd' } }],
       });
-      await runner.executeRun(makeSetup(), scenario, makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), scenario, makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.mcpServers).toBeDefined();
@@ -285,7 +285,7 @@ describe('ScenarioRunner', () => {
 
     it('omits agents when subagents is empty', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.agents).toBeUndefined();
@@ -293,7 +293,7 @@ describe('ScenarioRunner', () => {
 
     it('omits mcpServers when mcpServers is empty', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.mcpServers).toBeUndefined();
@@ -304,7 +304,7 @@ describe('ScenarioRunner', () => {
         { type: 'assistant', message: {}, uuid: UUID, session_id: 's1', parent_tool_use_id: null },
       ];
       mockQueryFn.mockReturnValue(createMockQuery(msgs));
-      const result = await runner.executeRun(makeSetup(), makeScenario(), makeTestRun(), createMockCallbacks());
+      const result = await runner.executeRun(makeProvider(), makeScenario(), makeTestRun(), createMockCallbacks());
 
       expect(result.status).toBe('failed');
       expect(result.error).toBe('Unknown error — no result message');
@@ -312,8 +312,8 @@ describe('ScenarioRunner', () => {
 
     it('passes thinking config for enabled mode', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      const setup = makeSetup({ thinking: { kind: 'enabled', budgetTokens: 5000 } });
-      await runner.executeRun(setup, makeScenario(), makeTestRun(), createMockCallbacks());
+      const provider = makeProvider({ thinking: { kind: 'enabled', budgetTokens: 5000 } });
+      await runner.executeRun(provider, makeScenario(), makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.thinking).toEqual({ type: 'enabled', budgetTokens: 5000 });
@@ -321,8 +321,8 @@ describe('ScenarioRunner', () => {
 
     it('passes thinking config for disabled mode', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      const setup = makeSetup({ thinking: { kind: 'disabled' } });
-      await runner.executeRun(setup, makeScenario(), makeTestRun(), createMockCallbacks());
+      const provider = makeProvider({ thinking: { kind: 'disabled' } });
+      await runner.executeRun(provider, makeScenario(), makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.thinking).toEqual({ type: 'disabled' });
@@ -330,8 +330,8 @@ describe('ScenarioRunner', () => {
 
     it('omits thinking when not configured', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
-      const setup = makeSetup({ thinking: undefined });
-      await runner.executeRun(setup, makeScenario(), makeTestRun(), createMockCallbacks());
+      const provider = makeProvider({ thinking: undefined });
+      await runner.executeRun(provider, makeScenario(), makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.thinking).toBeUndefined();
@@ -340,7 +340,7 @@ describe('ScenarioRunner', () => {
     it('does not set allowDangerouslySkipPermissions for default mode', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
       const scenario = makeScenario({ permissionMode: 'default' });
-      await runner.executeRun(makeSetup(), scenario, makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), scenario, makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.allowDangerouslySkipPermissions).toBe(false);
@@ -349,7 +349,7 @@ describe('ScenarioRunner', () => {
     it('does not include allowedTools when not set', async () => {
       mockQueryFn.mockReturnValue(createMockQuery([successResult()]));
       const scenario = makeScenario({ allowedTools: undefined });
-      await runner.executeRun(makeSetup(), scenario, makeTestRun(), createMockCallbacks());
+      await runner.executeRun(makeProvider(), scenario, makeTestRun(), createMockCallbacks());
 
       const opts = (mockQueryFn.mock.calls[0][0] as { options: Record<string, unknown> }).options;
       expect(opts.allowedTools).toBeUndefined();

@@ -1,5 +1,5 @@
 import type {
-  TestSetup,
+  Provider,
   Scenario,
   ScenarioCategory,
   Run,
@@ -8,7 +8,7 @@ import type {
   EvaluationStatus,
 } from '../types/index.js';
 
-export interface SetupFilter {
+export interface ProviderFilter {
   readonly provider?: 'api' | 'oauth';
   readonly model?: string;
 }
@@ -18,7 +18,7 @@ export interface ScenarioFilter {
 }
 
 export interface RunFilter {
-  readonly setupId?: string;
+  readonly providerId?: string;
   readonly scenarioId?: string;
   readonly status?: RunStatus;
 }
@@ -29,11 +29,11 @@ export interface EvaluationFilter {
 }
 
 export interface IStorage {
-  // Setups
-  getSetup(id: string): Promise<TestSetup | undefined>;
-  listSetups(filter?: SetupFilter): Promise<readonly TestSetup[]>;
-  saveSetup(setup: TestSetup): Promise<void>;
-  deleteSetup(id: string): Promise<boolean>;
+  // Providers
+  getProvider(id: string): Promise<Provider | undefined>;
+  listProviders(filter?: ProviderFilter): Promise<readonly Provider[]>;
+  saveProvider(provider: Provider): Promise<void>;
+  deleteProvider(id: string): Promise<boolean>;
 
   // Scenarios
   getScenario(id: string): Promise<Scenario | undefined>;
