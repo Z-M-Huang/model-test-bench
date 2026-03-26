@@ -1,15 +1,18 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher.js';
 
 const navItems = [
-  { to: '/', icon: 'dashboard', label: 'Dashboard' },
-  { to: '/providers', icon: 'settings_input_component', label: 'Providers' },
-  { to: '/scenarios', icon: 'schema', label: 'Scenarios' },
-  { to: '/run', icon: 'play_circle', label: 'New Run' },
-  { to: '/history', icon: 'history', label: 'Run History' },
+  { to: '/', icon: 'dashboard', labelKey: 'nav.dashboard' },
+  { to: '/providers', icon: 'settings_input_component', labelKey: 'nav.providers' },
+  { to: '/scenarios', icon: 'schema', labelKey: 'nav.scenarios' },
+  { to: '/run', icon: 'play_circle', labelKey: 'nav.newRun' },
+  { to: '/history', icon: 'history', labelKey: 'nav.runHistory' },
 ] as const;
 
 export function Layout(): React.JSX.Element {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-screen bg-surface text-on-surface overflow-hidden">
@@ -23,14 +26,14 @@ export function Layout(): React.JSX.Element {
             </span>
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-bold text-on-surface tracking-tight">Test Bench</div>
-            <div className="text-[0.6rem] text-on-surface-variant">Local Environment</div>
+            <div className="text-sm font-bold text-on-surface tracking-tight">{t('nav.testBench')}</div>
+            <div className="text-[0.6rem] text-on-surface-variant">{t('nav.envLabel')}</div>
           </div>
         </div>
 
         {/* Nav items */}
         <nav className="flex-1 space-y-1 mt-2">
-          {navItems.map(({ to, icon, label }) => (
+          {navItems.map(({ to, icon, labelKey }) => (
             <NavLink
               key={to}
               to={to}
@@ -52,15 +55,16 @@ export function Layout(): React.JSX.Element {
                   >
                     {icon}
                   </span>
-                  {label}
+                  {t(labelKey)}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Bottom action */}
-        <div className="px-4 mt-auto space-y-4">
+        {/* Bottom section */}
+        <div className="px-4 mt-auto space-y-3">
+          <LanguageSwitcher />
           <button
             type="button"
             onClick={() => navigate('/scenarios/new')}
@@ -69,7 +73,7 @@ export function Layout(): React.JSX.Element {
             <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>
               add_box
             </span>
-            Create Scenario
+            {t('nav.createScenario')}
           </button>
         </div>
       </aside>

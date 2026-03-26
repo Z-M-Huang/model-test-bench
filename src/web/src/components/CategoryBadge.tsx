@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { ScenarioCategory } from '../types.js';
 
 const colors: Record<ScenarioCategory, string> = {
@@ -16,12 +17,13 @@ interface Props {
 }
 
 export function CategoryBadge({ category }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const cls = colors[category] ?? colors.custom;
   return (
     <span
       className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${cls}`}
     >
-      {category}
+      {t(`categories.${category}` as const)}
     </span>
   );
 }

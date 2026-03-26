@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Provider, Scenario, Run } from '../types.js';
 import { RunStatusBar } from '../components/RunStatusBar.js';
@@ -8,6 +9,7 @@ import { useLiveProcess } from '../hooks/useLiveProcess.js';
 
 export function RunPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [selectedProvider, setSelectedProvider] = useState('');
@@ -76,8 +78,8 @@ export function RunPage(): React.JSX.Element {
   return (
     <div className="h-full flex flex-col">
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">New Run</h1>
-        <p className="text-on-surface-variant text-sm">Execute a test scenario against a provider configuration.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">{t('run.title')}</h1>
+        <p className="text-on-surface-variant text-sm">{t('run.subtitle')}</p>
       </div>
 
       {error && (
@@ -90,9 +92,9 @@ export function RunPage(): React.JSX.Element {
         {/* Left panel: controls */}
         <div className="w-full lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto">
           <div>
-            <label className={labelCls}>API Provider</label>
+            <label className={labelCls}>{t('run.apiProvider')}</label>
             <select className={selectCls} value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value)} disabled={isRunning}>
-              {providers.length === 0 && <option value="">No providers available</option>}
+              {providers.length === 0 && <option value="">{t('run.noProviders')}</option>}
               {providers.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -100,9 +102,9 @@ export function RunPage(): React.JSX.Element {
           </div>
 
           <div>
-            <label className={labelCls}>Scenario</label>
+            <label className={labelCls}>{t('run.scenario')}</label>
             <select className={selectCls} value={selectedScenario} onChange={(e) => setSelectedScenario(e.target.value)} disabled={isRunning}>
-              {scenarios.length === 0 && <option value="">No scenarios available</option>}
+              {scenarios.length === 0 && <option value="">{t('run.noScenarios')}</option>}
               {scenarios.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -118,12 +120,12 @@ export function RunPage(): React.JSX.Element {
             {starting ? (
               <>
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: '1rem' }}>progress_activity</span>
-                Starting...
+                {t('run.starting')}
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>play_arrow</span>
-                Start Run
+                {t('run.startRun')}
               </>
             )}
           </button>
@@ -145,7 +147,7 @@ export function RunPage(): React.JSX.Element {
           <div className="flex-1 overflow-y-auto">
             {!run ? (
               <div className="flex items-center justify-center h-full text-on-surface-variant/50 text-sm">
-                Select a provider and scenario, then click Start Run.
+                {t('run.emptyState')}
               </div>
             ) : (
               <MessageLog messages={messages} loading={isRunning && messages.length === 0} />

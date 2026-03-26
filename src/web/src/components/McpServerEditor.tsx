@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface McpServerEntry {
   name: string;
   config: Record<string, unknown>;
@@ -21,6 +23,7 @@ function getType(config: Record<string, unknown>): ServerType {
 }
 
 export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   function updateItem(idx: number, name: string, config: Record<string, unknown>) {
     const next = items.map((item, i) => (i === idx ? { name, config } : item));
     onChange(next);
@@ -50,7 +53,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
           <div key={idx} className="bg-surface-container rounded-md p-4 space-y-3 border border-outline-variant/10">
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1">
-                <label className={labelCls}>Server Name</label>
+                <label className={labelCls}>{t('mcpServerEditor.serverName')}</label>
                 <input
                   type="text"
                   className={inputCls}
@@ -70,7 +73,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
             </div>
 
             <div>
-              <label className={labelCls}>Type</label>
+              <label className={labelCls}>{t('mcpServerEditor.type')}</label>
               <select
                 className={inputCls + ' max-w-[160px]'}
                 value={serverType}
@@ -85,7 +88,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
             {serverType === 'stdio' && (
               <div className="space-y-3">
                 <div>
-                  <label className={labelCls}>Command</label>
+                  <label className={labelCls}>{t('mcpServerEditor.command')}</label>
                   <input
                     type="text"
                     className={inputCls}
@@ -95,7 +98,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Args (comma-separated)</label>
+                  <label className={labelCls}>{t('mcpServerEditor.args')}</label>
                   <input
                     type="text"
                     className={inputCls}
@@ -110,7 +113,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Environment Variables (KEY=VALUE per line)</label>
+                  <label className={labelCls}>{t('mcpServerEditor.envVars')}</label>
                   <textarea
                     className={inputCls + ' font-mono min-h-[60px] resize-y'}
                     value={
@@ -139,7 +142,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
             {(serverType === 'http' || serverType === 'sse') && (
               <div className="space-y-3">
                 <div>
-                  <label className={labelCls}>URL</label>
+                  <label className={labelCls}>{t('mcpServerEditor.url')}</label>
                   <input
                     type="text"
                     className={inputCls}
@@ -149,7 +152,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Headers (KEY: VALUE per line)</label>
+                  <label className={labelCls}>{t('mcpServerEditor.headers')}</label>
                   <textarea
                     className={inputCls + ' font-mono min-h-[60px] resize-y'}
                     value={
@@ -184,7 +187,7 @@ export function McpServerEditor({ items, onChange }: Props): React.JSX.Element {
         className="w-full py-2 border border-dashed border-outline-variant/30 rounded-md text-xs font-bold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60 transition-colors flex items-center justify-center gap-1.5"
       >
         <span className="material-symbols-outlined" style={{ fontSize: '0.9rem' }}>add</span>
-        Add MCP Server
+        {t('mcpServerEditor.addMcpServer')}
       </button>
     </div>
   );

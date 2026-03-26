@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Scenario, ScenarioCategory } from '../types.js';
 import { CategoryBadge } from '../components/CategoryBadge.js';
 
-const categoryMeta: Record<ScenarioCategory, { icon: string; title: string }> = {
-  reasoning: { icon: 'psychology', title: 'Reasoning & Logic' },
-  'instruction-following': { icon: 'format_list_bulleted', title: 'Instruction Following' },
-  planning: { icon: 'event_note', title: 'Planning & Strategy' },
-  'tool-strategy': { icon: 'code', title: 'Tool Strategy' },
-  'error-handling': { icon: 'error_outline', title: 'Error Handling' },
-  'ambiguity-handling': { icon: 'help_outline', title: 'Ambiguity Handling' },
-  'scope-management': { icon: 'adjust', title: 'Scope Management' },
-  custom: { icon: 'tune', title: 'Custom' },
+const categoryIcons: Record<ScenarioCategory, string> = {
+  reasoning: 'psychology',
+  'instruction-following': 'format_list_bulleted',
+  planning: 'event_note',
+  'tool-strategy': 'code',
+  'error-handling': 'error_outline',
+  'ambiguity-handling': 'help_outline',
+  'scope-management': 'adjust',
+  custom: 'tune',
 };
 
 const categoryOrder: ScenarioCategory[] = [
@@ -28,6 +29,7 @@ const categoryOrder: ScenarioCategory[] = [
 
 export function ScenarioList(): React.JSX.Element {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,28 +57,28 @@ export function ScenarioList(): React.JSX.Element {
           className="bg-gradient-to-br from-primary-container to-primary hover:opacity-90 text-on-primary-container font-semibold px-5 py-2 rounded-full text-xs flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary-container/20"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          New Scenario
+          {t('scenarios.newScenario')}
         </button>
       </div>
 
       {loading && (
-        <p className="text-center text-on-surface-variant py-12">Loading scenarios...</p>
+        <p className="text-center text-on-surface-variant py-12">{t('scenarios.loadingScenarios')}</p>
       )}
 
       {/* Category Sections */}
       <div className="space-y-12 pb-20">
         {presentCategories.map((cat) => {
-          const meta = categoryMeta[cat];
+          const icon = categoryIcons[cat];
           const items = grouped[cat];
           return (
             <section key={cat}>
               <div className="flex items-center gap-3 mb-6 border-b border-outline-variant/10 pb-2">
                 <span className="material-symbols-outlined text-primary text-lg">
-                  {meta.icon}
+                  {icon}
                 </span>
-                <h2 className="text-sm font-bold tracking-tight text-on-surface">{meta.title}</h2>
+                <h2 className="text-sm font-bold tracking-tight text-on-surface">{t(`categories.${cat}`)}</h2>
                 <span className="text-[10px] bg-surface-container-high px-2 py-0.5 rounded text-outline">
-                  {items.length} Scenario{items.length !== 1 ? 's' : ''}
+                  {t('scenarios.scenarioCount', { count: items.length })}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -100,15 +102,15 @@ export function ScenarioList(): React.JSX.Element {
                     <p className="text-[11px] text-on-surface-variant font-mono leading-relaxed mb-4 line-clamp-3 bg-surface-container-lowest p-2 rounded">
                       {sc.prompt
                         ? `"${sc.prompt.slice(0, 160)}${sc.prompt.length > 160 ? '...' : ''}"`
-                        : 'No prompt defined.'}
+                        : t('scenarios.noPrompt')}
                     </p>
                     {/* Agent config summary */}
                     {(() => {
                       const parts: string[] = [];
-                      if ((sc.claudeMdFiles ?? []).length > 0) parts.push(`${sc.claudeMdFiles.length} CLAUDE.md`);
-                      if ((sc.rules ?? []).length > 0) parts.push(`${sc.rules.length} rule${sc.rules.length !== 1 ? 's' : ''}`);
-                      if ((sc.subagents ?? []).length > 0) parts.push(`${sc.subagents.length} subagent${sc.subagents.length !== 1 ? 's' : ''}`);
-                      if ((sc.mcpServers ?? []).length > 0) parts.push(`${sc.mcpServers.length} MCP`);
+                      if ((sc.claudeMdFiles ?? []).length > 0) parts.push(t('scenarios.claudeMdCount', { count: sc.claudeMdFiles.length }));
+                      if ((sc.rules ?? []).length > 0) parts.push(t('scenarios.ruleCount', { count: sc.rules.length }));
+                      if ((sc.subagents ?? []).length > 0) parts.push(t('scenarios.subagentCount', { count: sc.subagents.length }));
+                      if ((sc.mcpServers ?? []).length > 0) parts.push(t('scenarios.mcpCount', { count: sc.mcpServers.length }));
                       return parts.length > 0 ? (
                         <div className="text-[10px] text-on-surface-variant mb-3 flex flex-wrap gap-1.5">
                           {parts.map((p) => (
@@ -121,7 +123,7 @@ export function ScenarioList(): React.JSX.Element {
                       <div className="flex gap-4">
                         <div className="flex flex-col">
                           <span className="text-[9px] text-outline uppercase tracking-tighter">
-                            Criteria
+                            {t('scenarios.criteria')}
                           </span>
                           <span className="text-xs font-mono font-bold text-on-surface">
                             {String((sc.criticalRequirements ?? []).length).padStart(2, '0')}
@@ -129,7 +131,7 @@ export function ScenarioList(): React.JSX.Element {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[9px] text-outline uppercase tracking-tighter">
-                            Scoring
+                            {t('scenarios.scoring')}
                           </span>
                           <span className="text-xs font-mono font-bold text-on-surface">
                             {String((sc.scoringDimensions ?? []).length).padStart(2, '0')}
@@ -149,7 +151,7 @@ export function ScenarioList(): React.JSX.Element {
             <span className="material-symbols-outlined text-outline-variant text-4xl mb-4 block">
               schema
             </span>
-            <p className="text-on-surface-variant text-sm">No scenarios found. Create one to get started.</p>
+            <p className="text-on-surface-variant text-sm">{t('scenarios.noScenarios')}</p>
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ClaudeMdEntry {
   role: 'project' | 'user';
@@ -32,6 +33,7 @@ function SlotEditor({
   onUpdate: (entry: ClaudeMdEntry | undefined) => void;
   onToggle: (enabled: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const enabled = !!entry;
   const [mode, setMode] = useState<SourceMode>(getMode(entry));
 
@@ -53,7 +55,7 @@ function SlotEditor({
             {role === 'project' ? 'folder' : 'person'}
           </span>
           <span className="text-xs font-bold uppercase tracking-widest text-on-surface">
-            {role === 'project' ? 'Project' : 'User'} CLAUDE.md
+            {t(`claudeMd.${role}`)} CLAUDE.md
           </span>
         </div>
         <button
@@ -79,7 +81,7 @@ function SlotEditor({
                     ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                     : 'text-on-surface-variant hover:text-on-surface')}
               >
-                {m === 'inline' ? 'Inline Content' : 'File Reference'}
+                {m === 'inline' ? t('claudeMd.inlineContent') : t('claudeMd.fileReference')}
               </button>
             ))}
           </div>

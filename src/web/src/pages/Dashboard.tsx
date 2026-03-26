@@ -1,18 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Provider, Scenario, Run } from '../types.js';
 import { StatusBadge } from '../components/StatusBadge.js';
-
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}s`;
-}
+import { formatDuration } from '../i18n/format.js';
 
 export function Dashboard(): React.JSX.Element {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -34,9 +30,9 @@ export function Dashboard(): React.JSX.Element {
   const recentRuns = runs.slice(0, 5);
 
   const stats = [
-    { label: 'Total Providers', value: providers.length, icon: 'settings_suggest' },
-    { label: 'Total Scenarios', value: scenarios.length, icon: 'account_tree' },
-    { label: 'Total Runs', value: runs.length, icon: 'rocket_launch' },
+    { label: t('dashboard.totalProviders'), value: providers.length, icon: 'settings_suggest' },
+    { label: t('dashboard.totalScenarios'), value: scenarios.length, icon: 'account_tree' },
+    { label: t('dashboard.totalRuns'), value: runs.length, icon: 'rocket_launch' },
   ];
 
   return (
@@ -44,10 +40,10 @@ export function Dashboard(): React.JSX.Element {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">
-          Dashboard
+          {t('dashboard.title')}
         </h1>
         <p className="text-on-surface-variant text-sm">
-          System performance and experiment orchestration overview.
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
@@ -90,13 +86,12 @@ export function Dashboard(): React.JSX.Element {
               <div className="bg-primary-container/20 p-2 w-fit rounded-lg mb-4">
                 <span className="material-symbols-outlined text-primary">add_circle</span>
               </div>
-              <h3 className="text-lg font-bold text-on-surface mb-2">New Provider</h3>
+              <h3 className="text-lg font-bold text-on-surface mb-2">{t('dashboard.newProvider')}</h3>
               <p className="text-on-surface-variant text-sm mb-6 flex-1">
-                Configure environment variables, model parameters, and adapter weights for a new
-                test environment.
+                {t('dashboard.newProviderDesc')}
               </p>
               <span className="text-primary text-[0.7rem] font-bold flex items-center gap-1">
-                INITIALIZE PROVIDER{' '}
+                {t('dashboard.initializeProvider')}{' '}
                 <span className="material-symbols-outlined text-[0.9rem]">arrow_forward</span>
               </span>
             </div>
@@ -112,13 +107,12 @@ export function Dashboard(): React.JSX.Element {
               <div className="bg-primary p-2 w-fit rounded-lg mb-4">
                 <span className="material-symbols-outlined text-on-primary">play_arrow</span>
               </div>
-              <h3 className="text-lg font-bold text-on-surface mb-2">Start Run</h3>
+              <h3 className="text-lg font-bold text-on-surface mb-2">{t('dashboard.startRun')}</h3>
               <p className="text-on-surface-variant text-sm mb-6 flex-1">
-                Execute a batch process using an existing provider and scenario. Real-time logging will
-                be enabled.
+                {t('dashboard.startRunDesc')}
               </p>
               <span className="text-on-surface text-[0.7rem] font-bold flex items-center gap-1">
-                LAUNCH ENGINE{' '}
+                {t('dashboard.launchEngine')}{' '}
                 <span className="material-symbols-outlined text-[0.9rem]">bolt</span>
               </span>
             </div>
@@ -129,38 +123,38 @@ export function Dashboard(): React.JSX.Element {
       {/* Recent Runs Table */}
       <div className="bg-surface-container-low rounded-lg overflow-hidden border border-outline-variant/5">
         <div className="px-6 py-4 flex items-center justify-between bg-surface-container">
-          <h2 className="text-sm font-bold text-on-surface">Recent Runs</h2>
+          <h2 className="text-sm font-bold text-on-surface">{t('dashboard.recentRuns')}</h2>
           <button
             onClick={() => navigate('/history')}
             className="text-[0.7rem] text-primary font-bold hover:underline"
           >
-            View All History
+            {t('dashboard.viewAllHistory')}
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low text-[0.65rem] text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/10">
               <tr>
-                <th className="px-6 py-3 font-semibold">Status</th>
-                <th className="px-6 py-3 font-semibold">Provider</th>
-                <th className="px-6 py-3 font-semibold">Scenario Name</th>
-                <th className="px-6 py-3 font-semibold">Duration</th>
-                <th className="px-6 py-3 font-semibold">Turns</th>
-                <th className="px-6 py-3 font-semibold text-right">Action</th>
+                <th className="px-6 py-3 font-semibold">{t('table.status')}</th>
+                <th className="px-6 py-3 font-semibold">{t('table.provider')}</th>
+                <th className="px-6 py-3 font-semibold">{t('table.scenarioName')}</th>
+                <th className="px-6 py-3 font-semibold">{t('table.duration')}</th>
+                <th className="px-6 py-3 font-semibold">{t('table.turns')}</th>
+                <th className="px-6 py-3 font-semibold text-right">{t('table.action')}</th>
               </tr>
             </thead>
             <tbody className="text-[0.75rem] divide-y divide-outline-variant/5">
               {loading && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-on-surface-variant">
-                    Loading...
+                    {t('common.loading')}
                   </td>
                 </tr>
               )}
               {!loading && recentRuns.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-on-surface-variant">
-                    No runs yet. Start your first run above.
+                    {t('dashboard.noRuns')}
                   </td>
                 </tr>
               )}

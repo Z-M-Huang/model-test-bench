@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const labelCls = 'block text-[0.65rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5';
 const inputCls =
@@ -33,6 +34,7 @@ function EntryEditor({
   onUpdate: (patch: Partial<NameContentEntry>) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<SourceMode>(item.loadFromFile ? 'file' : 'inline');
 
   function handleModeChange(newMode: SourceMode) {
@@ -48,7 +50,7 @@ function EntryEditor({
     <div className="bg-surface-container rounded-md p-3 space-y-2.5 border border-outline-variant/10">
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <label className={labelCls}>Name</label>
+          <label className={labelCls}>{t('common.name')}</label>
           <input type="text" className={inputCls} value={item.name} placeholder={namePlaceholder} onChange={(e) => onUpdate({ name: e.target.value })} />
         </div>
         <button type="button" onClick={onRemove} className="text-error/70 hover:text-error transition-colors p-1 mt-4">
@@ -68,7 +70,7 @@ function EntryEditor({
                 ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                 : 'text-on-surface-variant hover:text-on-surface')}
           >
-            {m === 'inline' ? 'Inline Content' : 'File Reference'}
+            {m === 'inline' ? t('claudeMd.inlineContent') : t('claudeMd.fileReference')}
           </button>
         ))}
       </div>
@@ -116,7 +118,7 @@ export function NameContentList({ items, onChange, label, namePlaceholder, conte
         className="w-full py-2 border border-dashed border-outline-variant/30 rounded-md text-xs font-bold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60 transition-colors flex items-center justify-center gap-1.5"
       >
         <span className="material-symbols-outlined" style={{ fontSize: '0.9rem' }}>add</span>
-        Add {label}
+        {t('common.add')} {label}
       </button>
     </div>
   );

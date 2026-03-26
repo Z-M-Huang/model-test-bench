@@ -1,19 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Provider } from '../types.js';
+import { formatDate } from '../i18n/format.js';
 
 function maskKey(key: string): string {
   if (key.length <= 6) return '****';
   return '****' + key.slice(-6);
-}
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 const rowIcons: { icon: string; color: string }[] = [
@@ -24,6 +18,7 @@ const rowIcons: { icon: string; color: string }[] = [
 
 export function ProviderList(): React.JSX.Element {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +31,7 @@ export function ProviderList(): React.JSX.Element {
   }, []);
 
   function handleDelete(id: string) {
-    if (!confirm('Delete this provider?')) return;
+    if (!confirm(t('providers.confirmDelete'))) return;
     api.providers.delete(id).then(() => setProviders((prev) => prev.filter((s) => s.id !== id)));
   }
 
@@ -45,9 +40,9 @@ export function ProviderList(): React.JSX.Element {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-on-surface">Providers</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-on-surface">{t('providers.title')}</h2>
           <p className="text-xs text-on-surface-variant mt-1">
-            Configure and manage your LLM provider integration parameters.
+            {t('providers.subtitle')}
           </p>
         </div>
         <button
@@ -55,7 +50,7 @@ export function ProviderList(): React.JSX.Element {
           className="bg-gradient-to-br from-primary-container to-primary hover:opacity-90 text-on-primary-container font-semibold px-5 py-2 rounded-full text-xs flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary-container/20"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          New Provider
+          {t('providers.newProvider')}
         </button>
       </div>
 
@@ -66,19 +61,19 @@ export function ProviderList(): React.JSX.Element {
             <thead>
               <tr className="bg-surface-container-low/50">
                 <th className="px-6 py-4 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Name
+                  {t('table.name')}
                 </th>
                 <th className="px-6 py-4 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Provider &amp; Details
+                  {t('table.providerDetails')}
                 </th>
                 <th className="px-6 py-4 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Model
+                  {t('table.model')}
                 </th>
                 <th className="px-6 py-4 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Created Date
+                  {t('table.createdDate')}
                 </th>
                 <th className="px-6 py-4 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest text-right">
-                  Actions
+                  {t('table.actions')}
                 </th>
               </tr>
             </thead>
@@ -86,25 +81,24 @@ export function ProviderList(): React.JSX.Element {
               {loading && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-on-surface-variant">
-                    Loading...
+                    {t('common.loading')}
                   </td>
                 </tr>
               )}
               {!loading && providers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-on-surface-variant">
-                    No providers yet. Create one to get started.
+                    {t('providers.noProviders')}
                   </td>
                 </tr>
               )}
               {providers.map((provider, i) => {
                 const ri = rowIcons[i % rowIcons.length];
-                // The list API returns summary fields (providerType, model) instead of the full provider object.
                 const extra = provider as unknown as Record<string, unknown>;
                 const providerKind = provider.provider?.kind ?? (extra.providerType as string) ?? 'api';
                 const providerModel = provider.provider?.model ?? (extra.model as string) ?? '';
                 const isApi = providerKind === 'api';
-                const providerLabel = isApi ? 'Anthropic API' : 'Claude Code Auth';
+                const providerLabel = isApi ? t('providers.anthropicApi') : t('providers.claudeCodeAuth');
                 return (
                   <tr
                     key={provider.id}
@@ -149,14 +143,14 @@ export function ProviderList(): React.JSX.Element {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[0.75rem] text-on-surface-variant">
-                      {fmtDate(provider.createdAt)}
+                      {formatDate(provider.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => navigate(`/providers/${provider.id}/edit`)}
                           className="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant hover:text-on-surface transition-colors"
-                          title="Edit"
+                          title={t('common.edit')}
                         >
                           <span className="material-symbols-outlined text-[1.1rem]">edit</span>
                         </button>
@@ -167,7 +161,7 @@ export function ProviderList(): React.JSX.Element {
                               .then((copy) => setProviders((prev) => [...prev, copy]))
                           }
                           className="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant hover:text-on-surface transition-colors"
-                          title="Duplicate"
+                          title={t('common.duplicate')}
                         >
                           <span className="material-symbols-outlined text-[1.1rem]">
                             content_copy
@@ -176,7 +170,7 @@ export function ProviderList(): React.JSX.Element {
                         <button
                           onClick={() => handleDelete(provider.id)}
                           className="p-1.5 hover:bg-error/10 rounded text-on-surface-variant hover:text-error transition-colors"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <span className="material-symbols-outlined text-[1.1rem]">delete</span>
                         </button>

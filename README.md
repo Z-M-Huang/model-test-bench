@@ -465,7 +465,7 @@ npm run lint
 
 ## License
 
-[ISC](LICENSE)
+[Apache-2.0](LICENSE)
 
 ---
 

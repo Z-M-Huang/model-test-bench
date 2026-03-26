@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   content: string;
 }
 
 export function ThinkingBlock({ content }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +19,7 @@ export function ThinkingBlock({ content }: Props): React.JSX.Element {
         <span className="material-symbols-outlined text-primary/60" style={{ fontSize: '0.9rem' }}>
           psychology
         </span>
-        <span className="text-[0.7rem] font-medium text-on-surface-variant">Thinking</span>
+        <span className="text-[0.7rem] font-medium text-on-surface-variant">{t('thinkingBlock.thinking')}</span>
         <span
           className={'material-symbols-outlined text-on-surface-variant transition-transform ml-auto ' + (open ? 'rotate-180' : '')}
           style={{ fontSize: '0.9rem' }}

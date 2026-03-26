@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   name: string;
@@ -13,6 +14,7 @@ function truncate(val: unknown, maxLen = 500): string {
 }
 
 export function ToolCallBlock({ name, input, output }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,7 +39,7 @@ export function ToolCallBlock({ name, input, output }: Props): React.JSX.Element
         <div className="px-3 py-2 space-y-2 bg-surface-container-low/50">
           {input !== undefined && (
             <div>
-              <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Input</div>
+              <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('toolCallBlock.input')}</div>
               <pre className="text-[0.7rem] text-on-surface-variant/80 font-mono whitespace-pre-wrap break-all">
                 {truncate(input)}
               </pre>
@@ -45,7 +47,7 @@ export function ToolCallBlock({ name, input, output }: Props): React.JSX.Element
           )}
           {output !== undefined && (
             <div>
-              <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Output</div>
+              <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('toolCallBlock.output')}</div>
               <pre className="text-[0.7rem] text-on-surface-variant/80 font-mono whitespace-pre-wrap break-all">
                 {truncate(output)}
               </pre>

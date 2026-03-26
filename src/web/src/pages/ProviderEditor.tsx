@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { ProviderConfig, Provider } from '../types.js';
 import { ProviderConfigEditor } from '../components/ProviderConfig.js';
@@ -19,6 +20,7 @@ const defaultProvider: ProviderConfig = {
 export function ProviderEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isNew = !id;
 
   const [name, setName] = useState('');
@@ -88,7 +90,7 @@ export function ProviderEditor(): React.JSX.Element {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-on-surface-variant text-sm animate-pulse">Loading provider...</div>
+        <div className="text-on-surface-variant text-sm animate-pulse">{t('providerEditor.loadingProvider')}</div>
       </div>
     );
   }
@@ -97,10 +99,10 @@ export function ProviderEditor(): React.JSX.Element {
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">
-          {isNew ? 'New Provider' : 'Edit Provider'}
+          {isNew ? t('providerEditor.newTitle') : t('providerEditor.editTitle')}
         </h1>
         <p className="text-on-surface-variant text-sm">
-          {isNew ? 'Configure a new test environment.' : `Editing provider ${id}`}
+          {isNew ? t('providerEditor.newSubtitle') : t('providerEditor.editSubtitle', { id })}
         </p>
       </div>
 
@@ -115,14 +117,14 @@ export function ProviderEditor(): React.JSX.Element {
         <section className={sectionCls}>
           <h2 className={sectionHeadingCls}>
             <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>info</span>
-            Basic Information
+            {t('providerEditor.basicInfo')}
           </h2>
           <div>
-            <label className={labelCls}>Name</label>
+            <label className={labelCls}>{t('common.name')}</label>
             <input type="text" className={inputCls} value={name} placeholder="my-provider" onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label className={labelCls}>Description</label>
+            <label className={labelCls}>{t('common.description')}</label>
             <textarea className={inputCls + ' min-h-[60px] resize-y'} value={description} placeholder="Describe this provider..." onChange={(e) => setDescription(e.target.value)} />
           </div>
         </section>
@@ -131,7 +133,7 @@ export function ProviderEditor(): React.JSX.Element {
         <section className={sectionCls}>
           <h2 className={sectionHeadingCls}>
             <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>cloud</span>
-            Provider Configuration
+            {t('providerEditor.providerConfig')}
           </h2>
           <ProviderConfigEditor value={provider} onChange={setProvider} />
         </section>
@@ -152,14 +154,14 @@ export function ProviderEditor(): React.JSX.Element {
             {saving && (
               <span className="material-symbols-outlined animate-spin" style={{ fontSize: '1rem' }}>progress_activity</span>
             )}
-            {isNew ? 'Create Provider' : 'Save Changes'}
+            {isNew ? t('providerEditor.createProvider') : t('providerEditor.saveChanges')}
           </button>
           <button
             type="button"
             onClick={() => navigate('/providers')}
             className="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors px-4 py-2.5"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </div>

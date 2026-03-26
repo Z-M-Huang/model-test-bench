@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProviderConfig as ProviderConfigType, ApiProviderConfig, OAuthProviderConfig } from '../types.js';
 
 type Tab = 'api' | 'oauth';
@@ -22,6 +23,7 @@ const defaultOAuth: OAuthProviderConfig = {
 };
 
 export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>(value.kind);
 
   function switchTab(next: Tab) {
@@ -58,7 +60,7 @@ export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Elem
       {tab === 'api' && value.kind === 'api' && (
         <div className="space-y-3">
           <div>
-            <label className={labelCls}>Base URL</label>
+            <label className={labelCls}>{t('providerConfig.baseUrl')}</label>
             <input
               type="text"
               className={inputCls}
@@ -68,7 +70,7 @@ export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Elem
             />
           </div>
           <div>
-            <label className={labelCls}>API Key</label>
+            <label className={labelCls}>{t('providerConfig.apiKey')}</label>
             <input
               type="password"
               className={inputCls}
@@ -78,7 +80,7 @@ export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Elem
             />
           </div>
           <div>
-            <label className={labelCls}>Model</label>
+            <label className={labelCls}>{t('providerConfig.model')}</label>
             <input
               type="text"
               className={inputCls}
@@ -92,7 +94,7 @@ export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Elem
       {tab === 'oauth' && value.kind === 'oauth' && (
         <div className="space-y-3">
           <div>
-            <label className={labelCls}>OAuth Token</label>
+            <label className={labelCls}>{t('providerConfig.oauthToken')}</label>
             <input
               type="password"
               className={inputCls}
@@ -102,7 +104,7 @@ export function ProviderConfigEditor({ value, onChange }: Props): React.JSX.Elem
             />
           </div>
           <div>
-            <label className={labelCls}>Model</label>
+            <label className={labelCls}>{t('providerConfig.model')}</label>
             <input
               type="text"
               className={inputCls}

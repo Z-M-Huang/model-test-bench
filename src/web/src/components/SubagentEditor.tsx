@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SubagentEntry {
   name: string;
@@ -37,6 +38,7 @@ function AdvancedSection({
   item: SubagentEntry;
   onUpdate: (patch: Partial<SubagentEntry>) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const hasAdvanced = (item.disallowedTools?.length ?? 0) > 0
     || (item.mcpServers?.length ?? 0) > 0
@@ -51,7 +53,7 @@ function AdvancedSection({
         className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface transition-colors"
       >
         <span className="material-symbols-outlined transition-transform" style={{ fontSize: '0.8rem', transform: open ? 'rotate(90deg)' : undefined }}>chevron_right</span>
-        Advanced{hasAdvanced ? ' *' : ''}
+        {t('subagentEditor.advanced')}{hasAdvanced ? ' *' : ''}
       </button>
       {open && (
         <div className="mt-2 space-y-3 pl-3 border-l-2 border-outline-variant/20">
@@ -86,6 +88,7 @@ function EntryEditor({
   onUpdate: (patch: Partial<SubagentEntry>) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<SourceMode>(item.loadFromFile ? 'file' : 'inline');
 
   function handleModeChange(newMode: SourceMode) {
@@ -101,7 +104,7 @@ function EntryEditor({
     <div className="bg-surface-container rounded-md p-4 space-y-3 border border-outline-variant/10">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1">
-          <label className={labelCls}>Name</label>
+          <label className={labelCls}>{t('common.name')}</label>
           <input type="text" className={inputCls} value={item.name} placeholder="research-agent" onChange={(e) => onUpdate({ name: e.target.value })} />
         </div>
         <button type="button" onClick={onRemove} className="text-error/70 hover:text-error transition-colors p-1 mt-4" title="Remove">
@@ -110,13 +113,13 @@ function EntryEditor({
       </div>
 
       <div>
-        <label className={labelCls}>Description</label>
+        <label className={labelCls}>{t('common.description')}</label>
         <input type="text" className={inputCls} value={item.description} placeholder="Handles research and data gathering" onChange={(e) => onUpdate({ description: e.target.value })} />
       </div>
 
       {/* Source toggle */}
       <div>
-        <label className={labelCls}>Prompt Source</label>
+        <label className={labelCls}>{t('subagentEditor.promptSource')}</label>
         <div className="flex gap-1 bg-surface-container-high rounded-md p-0.5">
           {(['inline', 'file'] as const).map((m) => (
             <button
@@ -128,7 +131,7 @@ function EntryEditor({
                   ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                   : 'text-on-surface-variant hover:text-on-surface')}
             >
-              {m === 'inline' ? 'Inline Prompt' : 'File Reference'}
+              {m === 'inline' ? t('subagentEditor.inlinePrompt') : t('subagentEditor.fileReference')}
             </button>
           ))}
         </div>
@@ -172,7 +175,7 @@ export function SubagentEditor({ items, onChange }: Props): React.JSX.Element {
         className="w-full py-2 border border-dashed border-outline-variant/30 rounded-md text-xs font-bold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60 transition-colors flex items-center justify-center gap-1.5"
       >
         <span className="material-symbols-outlined" style={{ fontSize: '0.9rem' }}>add</span>
-        Add Subagent
+        {t('subagentEditor.addSubagent')}
       </button>
     </div>
   );

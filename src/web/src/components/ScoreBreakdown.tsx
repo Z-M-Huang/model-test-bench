@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { ScoringDimension } from '../types.js';
 
 interface Props {
@@ -12,6 +13,7 @@ function barColor(score: number): string {
 }
 
 export function ScoreBreakdown({ dimensionScores, dimensions }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   // Build display list: use dimensions if available, otherwise fall back to raw scores
   const entries = dimensions.length > 0
     ? dimensions.map((d) => ({
@@ -27,7 +29,7 @@ export function ScoreBreakdown({ dimensionScores, dimensions }: Props): React.JS
 
   if (entries.length === 0) {
     return (
-      <div className="text-xs text-on-surface-variant/50">No dimension scores available.</div>
+      <div className="text-xs text-on-surface-variant/50">{t('report.noDimensionScores')}</div>
     );
   }
 

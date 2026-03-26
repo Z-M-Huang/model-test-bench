@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { SetupComplianceReport } from '../types.js';
 
 interface Props {
@@ -5,26 +6,27 @@ interface Props {
 }
 
 export function UsagePanel({ compliance }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const { skillUsage, subagentUsage } = compliance;
   const hasSkills = skillUsage.length > 0;
   const hasSubagents = subagentUsage.length > 0;
 
   if (!hasSkills && !hasSubagents) {
-    return <div className="text-xs text-on-surface-variant/50">No skill or subagent usage data available.</div>;
+    return <div className="text-xs text-on-surface-variant/50">{t('report.noUsageData')}</div>;
   }
 
   return (
     <div className="space-y-4">
       {hasSkills && (
         <div>
-          <h3 className="text-xs font-bold text-on-surface mb-2">Skill Usage</h3>
+          <h3 className="text-xs font-bold text-on-surface mb-2">{t('report.skillUsage')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="text-[0.65rem] text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/10">
                 <tr>
-                  <th className="px-3 py-2 font-semibold">Skill</th>
-                  <th className="px-3 py-2 font-semibold text-center">Invoked</th>
-                  <th className="px-3 py-2 font-semibold text-right">Count</th>
+                  <th className="px-3 py-2 font-semibold">{t('report.skill')}</th>
+                  <th className="px-3 py-2 font-semibold text-center">{t('report.invoked')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('report.count')}</th>
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-outline-variant/5">
@@ -50,14 +52,14 @@ export function UsagePanel({ compliance }: Props): React.JSX.Element {
 
       {hasSubagents && (
         <div>
-          <h3 className="text-xs font-bold text-on-surface mb-2">Subagent Usage</h3>
+          <h3 className="text-xs font-bold text-on-surface mb-2">{t('report.subagentUsage')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="text-[0.65rem] text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/10">
                 <tr>
-                  <th className="px-3 py-2 font-semibold">Subagent</th>
-                  <th className="px-3 py-2 font-semibold text-center">Invoked</th>
-                  <th className="px-3 py-2 font-semibold text-right">Count</th>
+                  <th className="px-3 py-2 font-semibold">{t('report.subagent')}</th>
+                  <th className="px-3 py-2 font-semibold text-center">{t('report.invoked')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('report.count')}</th>
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-outline-variant/5">

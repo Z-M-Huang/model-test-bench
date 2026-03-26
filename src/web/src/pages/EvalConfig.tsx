@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Run } from '../types.js';
 
@@ -25,6 +26,7 @@ interface EvalEntry {
 export function EvalConfig(): React.JSX.Element {
   const { id: runId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [run, setRun] = useState<Run | null>(null);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
@@ -102,7 +104,7 @@ export function EvalConfig(): React.JSX.Element {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-on-surface-variant text-sm animate-pulse">Loading...</div>
+        <div className="text-on-surface-variant text-sm animate-pulse">{t('common.loading')}</div>
       </div>
     );
   }
@@ -115,12 +117,11 @@ export function EvalConfig(): React.JSX.Element {
             Run {runId?.slice(0, 8)}
           </button>
           <span>/</span>
-          <span>Evaluate</span>
+          <span>{t('evalConfig.evaluate')}</span>
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">Evaluation Configuration</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">{t('evalConfig.title')}</h1>
         <p className="text-on-surface-variant text-sm">
-          Configure evaluators for run against scenario{' '}
-          <span className="font-medium text-on-surface">{run?.scenarioSnapshot?.name ?? ''}</span>.
+          {t('evalConfig.subtitle', { name: run?.scenarioSnapshot?.name ?? '' })}
         </p>
       </div>
 
@@ -132,7 +133,7 @@ export function EvalConfig(): React.JSX.Element {
 
       {providers.length === 0 ? (
         <div className="bg-surface-container rounded-md p-6 text-center text-on-surface-variant text-sm">
-          No providers available. Create a provider first to use as an evaluator.
+          {t('evalConfig.noProviders')}
         </div>
       ) : (
         <div className="space-y-6">
@@ -140,7 +141,7 @@ export function EvalConfig(): React.JSX.Element {
           <section className="space-y-4">
             <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
               <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>groups</span>
-              Evaluators
+              {t('evalConfig.evaluators')}
             </h2>
             {evaluators.map((entry, idx) => {
               const isLast = idx === evaluators.length - 1;
@@ -149,7 +150,7 @@ export function EvalConfig(): React.JSX.Element {
                   <div className="flex items-center justify-between">
                     <span className={'text-xs font-bold uppercase tracking-wider ' + (isLast ? 'text-primary' : 'text-on-surface-variant')}>
                       {entry.role}
-                      {isLast && <span className="ml-1 text-[0.6rem] normal-case font-normal">(final arbiter)</span>}
+                      {isLast && <span className="ml-1 text-[0.6rem] normal-case font-normal">{t('evalConfig.finalArbiter')}</span>}
                     </span>
                     {evaluators.length > 1 && (
                       <button type="button" onClick={() => removeEvaluator(idx)} className="text-error/70 hover:text-error transition-colors p-1">
@@ -159,12 +160,12 @@ export function EvalConfig(): React.JSX.Element {
                   </div>
                   {!isLast && (
                     <div>
-                      <label className={labelCls}>Role Name</label>
+                      <label className={labelCls}>{t('evalConfig.roleName')}</label>
                       <input type="text" className={inputCls + ' max-w-[240px]'} value={entry.role} onChange={(e) => updateEvaluator(idx, { role: e.target.value })} />
                     </div>
                   )}
                   <div>
-                    <label className={labelCls}>Provider</label>
+                    <label className={labelCls}>{t('evalConfig.provider')}</label>
                     <select className={selectCls} value={entry.providerId} onChange={(e) => updateEvaluator(idx, { providerId: e.target.value })}>
                       {providers.map((s) => (
                         <option key={s.id} value={s.id}>{s.name} ({s.model})</option>
@@ -181,7 +182,7 @@ export function EvalConfig(): React.JSX.Element {
               className="w-full py-2 border border-dashed border-outline-variant/30 rounded-md text-xs font-bold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60 transition-colors flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '0.9rem' }}>add</span>
-              Add Evaluator
+              {t('evalConfig.addEvaluator')}
             </button>
           </section>
 
@@ -189,10 +190,10 @@ export function EvalConfig(): React.JSX.Element {
           <section className="space-y-4">
             <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
               <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>settings</span>
-              Settings
+              {t('evalConfig.settings')}
             </h2>
             <div>
-              <label className={labelCls}>Max Debate Rounds (1-5)</label>
+              <label className={labelCls}>{t('evalConfig.maxDebateRounds')}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="range"
@@ -210,7 +211,7 @@ export function EvalConfig(): React.JSX.Element {
               <span className="material-symbols-outlined text-primary/60 mr-1" style={{ fontSize: '0.9rem', verticalAlign: 'middle' }}>
                 info
               </span>
-              {evaluators.length} evaluator{evaluators.length > 1 ? 's' : ''} x {maxRounds} round{maxRounds > 1 ? 's' : ''} = up to {evaluators.length * maxRounds} API calls.
+              {t('evalConfig.apiCallInfo', { evaluators: evaluators.length, rounds: maxRounds, total: evaluators.length * maxRounds })}
             </div>
           </section>
 
@@ -225,14 +226,14 @@ export function EvalConfig(): React.JSX.Element {
               {starting && (
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: '1rem' }}>progress_activity</span>
               )}
-              Start Evaluation
+              {t('evalConfig.startEvaluation')}
             </button>
             <button
               type="button"
               onClick={() => navigate(`/runs/${runId}`)}
               className="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors px-4 py-2.5"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

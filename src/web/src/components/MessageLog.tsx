@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SDKMessageRecord } from '../types.js';
 import { ToolCallBlock } from './ToolCallBlock.js';
 import { ThinkingBlock } from './ThinkingBlock.js';
@@ -93,6 +94,7 @@ function extractText(content: unknown): string {
 }
 
 function MessageEntry({ record }: { record: SDKMessageRecord }): React.JSX.Element {
+  const { t } = useTranslation();
   const { type, role, content, raw } = unwrap(record.message);
 
   // ── System messages: show compact or hide ──
@@ -103,7 +105,7 @@ function MessageEntry({ record }: { record: SDKMessageRecord }): React.JSX.Eleme
       return (
         <div className="text-[0.65rem] text-on-surface-variant/40 font-mono pl-9 flex items-center gap-2">
           <span className="material-symbols-outlined" style={{ fontSize: '0.7rem' }}>terminal</span>
-          Session initialized
+          {t('messageLog.sessionInitialized')}
         </div>
       );
     }
@@ -113,7 +115,9 @@ function MessageEntry({ record }: { record: SDKMessageRecord }): React.JSX.Eleme
       return (
         <div className="text-[0.65rem] text-warning/60 font-mono pl-9 flex items-center gap-2">
           <span className="material-symbols-outlined" style={{ fontSize: '0.7rem' }}>refresh</span>
-          API retry #{attempt ?? '?'}{error ? `: ${error}` : ''}
+          {error
+            ? t('messageLog.apiRetryWithError', { attempt: attempt ?? '?', error })
+            : t('messageLog.apiRetry', { attempt: attempt ?? '?' })}
         </div>
       );
     }

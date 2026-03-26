@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props<T> {
   items: T[];
@@ -15,6 +16,7 @@ export function DynamicList<T>({
   renderItem,
   label,
 }: Props<T>): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -27,12 +29,12 @@ export function DynamicList<T>({
           className="flex items-center gap-1 text-[0.65rem] font-bold text-primary hover:underline"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          Add
+          {t('dynamicList.add')}
         </button>
       </div>
 
       {items.length === 0 && (
-        <p className="text-[0.7rem] text-on-surface-variant/60 italic">No items yet.</p>
+        <p className="text-[0.7rem] text-on-surface-variant/60 italic">{t('dynamicList.noItems')}</p>
       )}
 
       {items.map((item, i) => (

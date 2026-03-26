@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { api } from '../api.js';
 import type { Evaluation, Run } from '../types.js';
 import { StatusBadge } from '../components/StatusBadge.js';
@@ -29,27 +31,28 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
   );
 }
 
-function extractStrengthsWeaknesses(evaluation: Evaluation): { strengths: string[]; weaknesses: string[]; recommendations: string[] } {
+function extractStrengthsWeaknesses(evaluation: Evaluation, t: TFunction): { strengths: string[]; weaknesses: string[]; recommendations: string[] } {
   const strengths: string[] = [];
   const weaknesses: string[] = [];
   const recommendations: string[] = [];
   for (const [dim, score] of Object.entries(evaluation.synthesis.dimensionScores)) {
-    if (score >= 8) strengths.push(`Strong performance on ${dim} (${score.toFixed(1)}/10)`);
-    if (score < 4) weaknesses.push(`Low score on ${dim} (${score.toFixed(1)}/10)`);
+    if (score >= 8) strengths.push(t('report.strongPerformance', { dim, score: score.toFixed(1) }));
+    if (score < 4) weaknesses.push(t('report.lowScore', { dim, score: score.toFixed(1) }));
   }
   for (const f of evaluation.criticalResults.filter((r) => !r.met)) {
-    weaknesses.push(`Failed: ${f.requirement}`);
-    recommendations.push(`Address critical requirement: ${f.requirement}`);
+    weaknesses.push(t('report.failedReq', { requirement: f.requirement }));
+    recommendations.push(t('report.addressReq', { requirement: f.requirement }));
   }
   for (const v of evaluation.setupCompliance.instructionCompliance.violated) {
-    weaknesses.push(`Violated instruction: ${v}`);
+    weaknesses.push(t('report.violatedInstruction', { instruction: v }));
   }
-  if (strengths.length === 0) strengths.push('Evaluation completed successfully');
+  if (strengths.length === 0) strengths.push(t('report.evalSuccess'));
   return { strengths, weaknesses, recommendations };
 }
 
 function FullReport({ evaluation, run }: { evaluation: Evaluation; run: Run | null }): React.JSX.Element {
-  const { strengths, weaknesses, recommendations } = extractStrengthsWeaknesses(evaluation);
+  const { t } = useTranslation();
+  const { strengths, weaknesses, recommendations } = extractStrengthsWeaknesses(evaluation, t);
   const scenario = run?.scenarioSnapshot;
 
   return (
@@ -58,34 +61,34 @@ function FullReport({ evaluation, run }: { evaluation: Evaluation; run: Run | nu
         <ReportHeader synthesis={evaluation.synthesis} answerComparison={evaluation.answerComparison} totalCostUsd={evaluation.totalCostUsd} numRounds={evaluation.rounds.length} />
       )}
       {evaluation.synthesis && (
-        <SectionCard title="Score Breakdown" icon="analytics">
+        <SectionCard title={t('report.scoreBreakdown')} icon="analytics">
           <ScoreBreakdown dimensionScores={evaluation.synthesis.dimensionScores} dimensions={scenario?.scoringDimensions ?? []} />
         </SectionCard>
       )}
-      <SectionCard title="Critical Requirements" icon="checklist">
+      <SectionCard title={t('report.criticalRequirements')} icon="checklist">
         <CriticalChecklist results={evaluation.criticalResults} />
       </SectionCard>
-      <SectionCard title="Answer Comparison" icon="compare_arrows">
+      <SectionCard title={t('report.answerComparison')} icon="compare_arrows">
         <AnswerComparison comparison={evaluation.answerComparison} expectedAnswer={scenario?.expectedAnswer ?? ''} actualAnswer={run?.resultText ?? ''} />
       </SectionCard>
-      <SectionCard title="Instruction Compliance" icon="policy">
+      <SectionCard title={t('report.instructionCompliance')} icon="policy">
         <ComplianceTable compliance={evaluation.setupCompliance.instructionCompliance} />
       </SectionCard>
-      <SectionCard title="Tool & Agent Usage" icon="precision_manufacturing">
+      <SectionCard title={t('report.toolAgentUsage')} icon="precision_manufacturing">
         <UsagePanel compliance={evaluation.setupCompliance} />
       </SectionCard>
-      <SectionCard title="Analysis" icon="insights">
+      <SectionCard title={t('report.analysis')} icon="insights">
         <StrengthsWeaknesses strengths={strengths} weaknesses={weaknesses} recommendations={recommendations} />
       </SectionCard>
       {evaluation.rounds.length > 0 && (
-        <SectionCard title={`Evaluation Rounds (${evaluation.rounds.length})`} icon="sync">
+        <SectionCard title={t('report.evaluationRounds', { count: evaluation.rounds.length })} icon="sync">
           <div className="space-y-3">
             {evaluation.rounds.map((round) => (
               <div key={round.roundNumber} className="bg-surface-container rounded-md p-3 border border-outline-variant/10">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-on-surface">Round {round.roundNumber}</span>
+                  <span className="text-xs font-bold text-on-surface">{t('report.round', { number: round.roundNumber })}</span>
                   <span className={'text-[0.65rem] font-bold ' + (round.consensusReached ? 'text-green-400' : 'text-yellow-400')}>
-                    {round.consensusReached ? 'Consensus' : 'No consensus'}
+                    {round.consensusReached ? t('report.consensus') : t('report.noConsensus')}
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -113,6 +116,7 @@ function FullReport({ evaluation, run }: { evaluation: Evaluation; run: Run | nu
 export function ReportView(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,7 +160,7 @@ export function ReportView(): React.JSX.Element {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-on-surface-variant text-sm animate-pulse">Loading evaluation...</div>
+        <div className="text-on-surface-variant text-sm animate-pulse">{t('report.loadingEvaluation')}</div>
       </div>
     );
   }
@@ -164,7 +168,7 @@ export function ReportView(): React.JSX.Element {
   if (error || !evaluation) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-error text-sm">{error ?? 'Evaluation not found'}</div>
+        <div className="text-error text-sm">{error ?? t('report.evaluationNotFound')}</div>
       </div>
     );
   }
@@ -175,7 +179,7 @@ export function ReportView(): React.JSX.Element {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-on-surface-variant text-xs font-mono">
-        <button type="button" onClick={() => navigate('/history')} className="hover:text-on-surface transition-colors">History</button>
+        <button type="button" onClick={() => navigate('/history')} className="hover:text-on-surface transition-colors">{t('runDetail.history')}</button>
         <span>/</span>
         {run && (
           <>
@@ -185,15 +189,15 @@ export function ReportView(): React.JSX.Element {
             <span>/</span>
           </>
         )}
-        <span>Evaluation</span>
+        <span>{t('evalConfig.evaluate')}</span>
       </div>
 
       {/* Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">Evaluation Report</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">{t('report.title')}</h1>
           <p className="text-on-surface-variant text-sm">
-            {run?.scenarioSnapshot ? `Scenario: ${run.scenarioSnapshot.name}` : `Run: ${evaluation.runId.slice(0, 8)}`}
+            {run?.scenarioSnapshot ? t('report.scenarioLabel', { name: run.scenarioSnapshot.name }) : t('report.runLabel', { id: evaluation.runId.slice(0, 8) })}
           </p>
         </div>
         <StatusBadge status={evaluation.status} />
@@ -206,7 +210,7 @@ export function ReportView(): React.JSX.Element {
               <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: '1.2rem' }}>progress_activity</span>
             )}
             <h2 className="text-lg font-bold text-on-surface">
-              {evaluation.status === 'running' ? 'Evaluation in progress...' : 'Waiting to start...'}
+              {evaluation.status === 'running' ? t('report.inProgress') : t('report.waitingToStart')}
             </h2>
           </div>
           {progressSteps.length > 0 && (

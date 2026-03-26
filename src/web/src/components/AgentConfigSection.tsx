@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ClaudeMdEditor } from './ClaudeMdEditor.js';
 import { NameContentList } from './NameContentList.js';
 import type { NameContentEntry } from './NameContentList.js';
@@ -52,6 +53,7 @@ function SectionHead({ icon, title }: { icon: string; title: string }) {
 }
 
 export function AgentConfigSection({ value, onChange, readOnly }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   function patch(partial: Partial<AgentConfigValues>) {
     onChange({ ...value, ...partial });
   }
@@ -60,12 +62,12 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
     <div className="space-y-6">
       {/* CLAUDE.md Files */}
       <div className="bg-surface-container p-5 rounded-lg space-y-4">
-        <SectionHead icon="description" title="CLAUDE.md Files" />
+        <SectionHead icon="description" title={t('agentConfig.claudeMdFiles')} />
         <p className="text-[0.65rem] text-on-surface-variant -mt-2">
-          Up to 2 files: one project-level and one user-level. Choose inline content or a file path.
+          {t('agentConfig.claudeMdHelp')}
         </p>
         {readOnly ? (
-          <div className="text-xs text-on-surface-variant">{value.claudeMdFiles.length} file(s)</div>
+          <div className="text-xs text-on-surface-variant">{t('agentConfig.fileCount', { count: value.claudeMdFiles.length })}</div>
         ) : (
           <ClaudeMdEditor items={value.claudeMdFiles} onChange={(items) => patch({ claudeMdFiles: items })} />
         )}
@@ -74,17 +76,17 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
       {/* Rules & Skills side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-surface-container p-5 rounded-lg space-y-4">
-          <SectionHead icon="gavel" title="Rules" />
+          <SectionHead icon="gavel" title={t('agentConfig.rules')} />
           {readOnly ? (
-            <div className="text-xs text-on-surface-variant">{value.rules.length} rule(s)</div>
+            <div className="text-xs text-on-surface-variant">{t('agentConfig.ruleCount', { count: value.rules.length })}</div>
           ) : (
             <NameContentList items={value.rules} onChange={(items) => patch({ rules: items })} label="Rule" namePlaceholder="Rule name" contentPlaceholder="Rule content..." />
           )}
         </div>
         <div className="bg-surface-container p-5 rounded-lg space-y-4">
-          <SectionHead icon="build" title="Skills" />
+          <SectionHead icon="build" title={t('agentConfig.skills')} />
           {readOnly ? (
-            <div className="text-xs text-on-surface-variant">{value.skills.length} skill(s)</div>
+            <div className="text-xs text-on-surface-variant">{t('agentConfig.skillCount', { count: value.skills.length })}</div>
           ) : (
             <NameContentList items={value.skills} onChange={(items) => patch({ skills: items })} label="Skill" namePlaceholder="Skill name" contentPlaceholder="Skill definition..." />
           )}
@@ -94,17 +96,17 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
       {/* Subagents & MCP Servers side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-surface-container p-5 rounded-lg space-y-4">
-          <SectionHead icon="smart_toy" title="Subagents" />
+          <SectionHead icon="smart_toy" title={t('agentConfig.subagents')} />
           {readOnly ? (
-            <div className="text-xs text-on-surface-variant">{value.subagents.length} subagent(s)</div>
+            <div className="text-xs text-on-surface-variant">{t('agentConfig.subagentCount', { count: value.subagents.length })}</div>
           ) : (
             <SubagentEditor items={value.subagents} onChange={(items) => patch({ subagents: items })} />
           )}
         </div>
         <div className="bg-surface-container p-5 rounded-lg space-y-4">
-          <SectionHead icon="dns" title="MCP Servers" />
+          <SectionHead icon="dns" title={t('agentConfig.mcpServers')} />
           {readOnly ? (
-            <div className="text-xs text-on-surface-variant">{value.mcpServers.length} server(s)</div>
+            <div className="text-xs text-on-surface-variant">{t('agentConfig.serverCount', { count: value.mcpServers.length })}</div>
           ) : (
             <McpServerEditor items={value.mcpServers} onChange={(items) => patch({ mcpServers: items })} />
           )}
@@ -113,30 +115,30 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
 
       {/* Permissions, Max Turns, Denied Tools — single card */}
       <div className="bg-surface-container p-5 rounded-lg space-y-4">
-        <SectionHead icon="security" title="Permissions & Limits" />
+        <SectionHead icon="security" title={t('agentConfig.permissionsLimits')} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Permission Mode</label>
+            <label className={labelCls}>{t('agentConfig.permissionMode')}</label>
             <select
               className={inputCls + ' max-w-[200px]'}
               value={value.permissionMode}
               disabled={readOnly}
               onChange={(e) => patch({ permissionMode: e.target.value })}
             >
-              <option value="default">Default</option>
-              <option value="acceptEdits">Accept Edits</option>
-              <option value="plan">Plan</option>
-              <option value="bypassPermissions">Bypass Permissions</option>
+              <option value="default">{t('permissionMode.default')}</option>
+              <option value="acceptEdits">{t('permissionMode.acceptEdits')}</option>
+              <option value="plan">{t('permissionMode.plan')}</option>
+              <option value="bypassPermissions">{t('permissionMode.bypassPermissions')}</option>
             </select>
           </div>
           <div>
-            <label className={labelCls}>Max Turns</label>
+            <label className={labelCls}>{t('agentConfig.maxTurns')}</label>
             <input
               type="number"
               className={inputCls + ' max-w-[160px]'}
               min={1}
               value={value.maxTurns ?? ''}
-              placeholder="No limit"
+              placeholder={t('common.noLimit')}
               readOnly={readOnly}
               onChange={(e) => patch({ maxTurns: e.target.value ? Number(e.target.value) : undefined })}
             />
@@ -145,9 +147,9 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
 
         {/* Denied Tools */}
         <div>
-          <label className={labelCls}>Denied Tools</label>
+          <label className={labelCls}>{t('agentConfig.deniedTools')}</label>
           <p className="text-[0.6rem] text-on-surface-variant mb-2 -mt-1">
-            All tools are allowed by default. Click to deny specific tools.
+            {t('agentConfig.deniedToolsHelp')}
           </p>
           <div className="flex flex-wrap gap-2">
             {ALL_TOOLS.map((tool) => {
@@ -184,9 +186,9 @@ export function AgentConfigSection({ value, onChange, readOnly }: Props): React.
 
         {/* Disallowed Tools (SDK blocklist — completely removes from model context) */}
         <div>
-          <label className={labelCls}>Disallowed Tools (SDK Blocklist)</label>
+          <label className={labelCls}>{t('agentConfig.disallowedTools')}</label>
           <p className="text-[0.6rem] text-on-surface-variant mb-2 -mt-1">
-            Comma-separated tool names to completely remove from the model context. Unlike denied tools above, these won't exist at all.
+            {t('agentConfig.disallowedToolsHelp')}
           </p>
           <input
             type="text"

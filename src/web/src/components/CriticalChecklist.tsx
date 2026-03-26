@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CriticalPartResult } from '../types.js';
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
 }
 
 function CheckItem({ result }: { result: CriticalPartResult }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +33,7 @@ function CheckItem({ result }: { result: CriticalPartResult }): React.JSX.Elemen
       </button>
       {open && (
         <div className="px-3 py-2 bg-surface-container-low/50 border-t border-outline-variant/10">
-          <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Evidence</div>
+          <div className="text-[0.6rem] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('report.evidence')}</div>
           <div className="text-xs text-on-surface-variant whitespace-pre-wrap">{result.evidence}</div>
         </div>
       )}
@@ -40,8 +42,9 @@ function CheckItem({ result }: { result: CriticalPartResult }): React.JSX.Elemen
 }
 
 export function CriticalChecklist({ results }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   if (results.length === 0) {
-    return <div className="text-xs text-on-surface-variant/50">No critical requirements defined.</div>;
+    return <div className="text-xs text-on-surface-variant/50">{t('report.noCriticalRequirements')}</div>;
   }
 
   const passed = results.filter((r) => r.met).length;
@@ -49,7 +52,7 @@ export function CriticalChecklist({ results }: Props): React.JSX.Element {
   return (
     <div className="space-y-2">
       <div className="text-xs text-on-surface-variant mb-2">
-        {passed}/{results.length} passed
+        {t('report.passedCount', { passed, total: results.length })}
       </div>
       {results.map((result, idx) => (
         <CheckItem key={idx} result={result} />

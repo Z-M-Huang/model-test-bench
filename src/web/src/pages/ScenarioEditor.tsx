@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
 import type { Scenario, ScenarioCategory, WorkspaceFile, ScoringDimension } from '../types.js';
 import { CodeEditor } from '../components/CodeEditor.js';
@@ -75,6 +76,7 @@ const inputCls = 'w-full bg-surface-container-lowest border-none rounded focus:r
 export function ScenarioEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
@@ -143,7 +145,7 @@ export function ScenarioEditor(): React.JSX.Element {
     set('scoringDimensions', form.scoringDimensions.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
   }
 
-  if (loading) return <p className="text-on-surface-variant py-12 text-center">Loading scenario...</p>;
+  if (loading) return <p className="text-on-surface-variant py-12 text-center">{t('scenarioEditor.loadingScenario')}</p>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -151,16 +153,16 @@ export function ScenarioEditor(): React.JSX.Element {
       <div className="flex items-end justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-on-surface">
-            {isNew ? 'Create New Scenario' : 'Edit Scenario'}
+            {isNew ? t('scenarioEditor.createTitle') : t('scenarioEditor.editTitle')}
           </h2>
           <p className="text-sm text-on-surface-variant">
-            Define agent configuration, evaluation parameters and ground truth for model testing.
+            {t('scenarioEditor.subtitle')}
           </p>
         </div>
         <div className="flex gap-3">
-          <button type="button" onClick={() => navigate('/scenarios')} className="px-6 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">Discard</button>
+          <button type="button" onClick={() => navigate('/scenarios')} className="px-6 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">{t('common.discard')}</button>
           <button type="button" onClick={handleSave} disabled={saving} className="px-6 py-2 rounded-lg text-sm font-semibold bg-primary text-on-primary hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save Scenario'}
+            {saving ? t('scenarioEditor.saving') : t('scenarioEditor.saveScenario')}
           </button>
         </div>
       </div>
@@ -171,16 +173,16 @@ export function ScenarioEditor(): React.JSX.Element {
           <div className="lg:sticky lg:top-6 space-y-6">
             {/* Basic Info */}
             <div className="bg-surface-container p-5 rounded-lg space-y-4">
-              <SectionHead icon="info" title="Basic Information" />
+              <SectionHead icon="info" title={t('scenarioEditor.basicInfo')} />
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className={labelCls}>Scenario Name</label>
+                  <label className={labelCls}>{t('scenarioEditor.scenarioName')}</label>
                   <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. complex_math_reasoning_01" className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className={labelCls}>Category</label>
+                  <label className={labelCls}>{t('scenarioEditor.category')}</label>
                   <select value={form.category} onChange={(e) => set('category', e.target.value as ScenarioCategory)} className={inputCls}>
-                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {categories.map((c) => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
                   </select>
                 </div>
               </div>
@@ -188,7 +190,7 @@ export function ScenarioEditor(): React.JSX.Element {
 
             {/* Critical Requirements */}
             <div className="bg-surface-container p-5 rounded-lg space-y-4">
-              <SectionHead icon="rule" title="Critical Requirements" />
+              <SectionHead icon="rule" title={t('scenarioEditor.criticalRequirements')} />
               <DynamicList label="" items={form.criticalRequirements}
                 onAdd={() => set('criticalRequirements', [...form.criticalRequirements, ''])}
                 onRemove={(i) => set('criticalRequirements', form.criticalRequirements.filter((_, idx) => idx !== i))}
@@ -200,15 +202,15 @@ export function ScenarioEditor(): React.JSX.Element {
 
             {/* Expected Answer */}
             <div className="bg-surface-container p-5 rounded-lg space-y-4">
-              <SectionHead icon="verified" title="Expected Answer" />
+              <SectionHead icon="verified" title={t('scenarioEditor.expectedAnswer')} />
               <CodeEditor value={form.expectedAnswer} onChange={(v) => set('expectedAnswer', v)} placeholder="Describe the ideal response..." rows={8} />
             </div>
 
             {/* Grading & Scoring */}
             <div className="bg-surface-container p-5 rounded-lg space-y-4">
-              <SectionHead icon="analytics" title="Grading & Scoring" />
-              <CodeEditor label="Grading Guidelines" value={form.gradingGuidelines} onChange={(v) => set('gradingGuidelines', v)} placeholder="General grading instructions..." rows={4} />
-              <DynamicList label="Scoring Dimensions" items={form.scoringDimensions}
+              <SectionHead icon="analytics" title={t('scenarioEditor.gradingScoring')} />
+              <CodeEditor label={t('scenarioEditor.gradingGuidelines')} value={form.gradingGuidelines} onChange={(v) => set('gradingGuidelines', v)} placeholder="General grading instructions..." rows={4} />
+              <DynamicList label={t('scenarioEditor.scoringDimensions')} items={form.scoringDimensions}
                 onAdd={() => set('scoringDimensions', [...form.scoringDimensions, { name: '', weight: 0, description: '' }])}
                 onRemove={(i) => set('scoringDimensions', form.scoringDimensions.filter((_, idx) => idx !== i))}
                 renderItem={(dim, i) => (
@@ -216,7 +218,7 @@ export function ScenarioEditor(): React.JSX.Element {
                     <div className="flex items-center gap-4">
                       <input type="text" value={dim.name} onChange={(e) => updateDim(i, { name: e.target.value })} placeholder="Dimension name" className="bg-transparent border-none text-xs font-bold text-on-surface p-0 focus:ring-0 flex-1" />
                       <div className="flex items-center gap-2 bg-surface-container px-2 py-1 rounded">
-                        <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Weight</span>
+                        <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">{t('scenarioEditor.weight')}</span>
                         <input type="number" step="0.1" min="0" max="1" value={dim.weight} onChange={(e) => updateDim(i, { weight: parseFloat(e.target.value) || 0 })} className="bg-transparent border-none text-xs font-mono text-primary p-0 w-10 focus:ring-0 text-center" />
                       </div>
                     </div>
@@ -236,13 +238,13 @@ export function ScenarioEditor(): React.JSX.Element {
 
           {/* User Prompt */}
           <div className="bg-surface-container p-5 rounded-lg space-y-4">
-            <SectionHead icon="terminal" title="User Prompt" />
+            <SectionHead icon="terminal" title={t('scenarioEditor.userPrompt')} />
             <CodeEditor value={form.prompt} onChange={(v) => set('prompt', v)} placeholder="Enter the user test prompt here..." rows={8} />
           </div>
 
           {/* Workspace Files */}
           <div className="bg-surface-container p-5 rounded-lg space-y-4">
-            <SectionHead icon="folder_open" title="Workspace Files" />
+            <SectionHead icon="folder_open" title={t('scenarioEditor.workspaceFiles')} />
             <DynamicList label="" items={form.workspaceFiles}
               onAdd={() => set('workspaceFiles', [...form.workspaceFiles, { path: '', content: '' }])}
               onRemove={(i) => set('workspaceFiles', form.workspaceFiles.filter((_, idx) => idx !== i))}
