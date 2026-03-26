@@ -2,12 +2,23 @@
   "name": "claude-test-bench",
   "version": "1.0.0",
   "type": "module",
-  "description": "A test bench for evaluating Claude agent configurations",
+  "description": "Benchmark AI agent behavior — A/B test CLAUDE.md instructions, compare models, and grade runs with LLM-based evaluation",
   "main": "dist/server/index.js",
   "bin": {
     "ctb": "./dist/bin/ctb.js",
     "claude-test-bench": "./dist/bin/ctb.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*",
+    "!dist/**/route-test-helpers.*",
+    "docs/schemas/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "npm run build:server && npm run build:web",
     "build:server": "tsc -p tsconfig.server.json && tsc -p tsconfig.bin.json",
@@ -16,13 +27,25 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "format": "prettier --write 'src/**/*.{ts,tsx}'"
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Z-M-Huang/claude-test-bench.git"
   },
-  "keywords": [],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-md",
+    "benchmark",
+    "testing",
+    "ai-agent",
+    "llm",
+    "evaluation",
+    "agent-sdk",
+    "instruction-compliance"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
