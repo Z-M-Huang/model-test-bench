@@ -67,9 +67,18 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
+// ─── Update checker ──────────────────────────────────────────────────
+
+import { checkForUpdate } from '../src/server/services/update-checker.js';
+
 // ─── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  // Check for updates (non-blocking)
+  const pkgPath = new URL('../../package.json', import.meta.url);
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as { version: string };
+  checkForUpdate(pkg.version);
+
   // Load .env from the user's current working directory
   loadEnvFile(path.join(process.cwd(), '.env'));
 
