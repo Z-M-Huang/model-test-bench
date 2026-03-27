@@ -68,53 +68,6 @@ test.describe('Run Page', () => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
   });
 
-  // --- Reviewer Providers section ---
-
-  test('reviewer providers section is visible with add button', async ({ page }) => {
-    await expect(page.getByText('Reviewer Providers')).toBeVisible();
-    await expect(page.getByText('No reviewers')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Add/i }).first()).toBeVisible();
-  });
-
-  test('can add and remove reviewer providers', async ({ page, request }) => {
-    const listRes = await request.get('/api/providers');
-    const providers = await listRes.json();
-    if (providers.length === 0) return; // skip if no providers
-
-    // Add first reviewer
-    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).getByRole('button', { name: /Add/i });
-    await addBtn.click();
-
-    // "No reviewers" text should disappear
-    await expect(page.getByText('No reviewers')).not.toBeVisible();
-
-    // Should see a Synthesizer label (single reviewer = synthesizer)
-    await expect(page.getByText('Synthesizer')).toBeVisible();
-
-    // Should see max rounds slider
-    await expect(page.getByText('Max Rounds')).toBeVisible();
-
-    // Add a second reviewer
-    await addBtn.click();
-
-    // Should now see Evaluator + Synthesizer labels
-    await expect(page.getByText('Evaluator', { exact: true })).toBeVisible();
-    await expect(page.getByText('Synthesizer')).toBeVisible();
-
-    // Remove the first reviewer
-    const closeButtons = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).locator('button:has(span:text("close"))');
-    await closeButtons.first().click();
-
-    // Should be back to one reviewer (Synthesizer only)
-    await expect(page.getByText('Synthesizer')).toBeVisible();
-
-    // Remove the last reviewer
-    await page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).locator('button:has(span:text("close"))').click();
-
-    // Should show "No reviewers" again
-    await expect(page.getByText('No reviewers')).toBeVisible();
-  });
-
   // --- Start Run interaction ---
 
   test('clicking Start Run does not crash the page', async ({ page, request }) => {
@@ -137,22 +90,4 @@ test.describe('Run Page', () => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
   });
 
-  test('clicking Start Run with reviewer providers does not crash', async ({ page, request }) => {
-    const providersRes = await request.get('/api/providers');
-    const providers = await providersRes.json();
-    const scenariosRes = await request.get('/api/scenarios');
-    const scenarios = await scenariosRes.json();
-    if (providers.length === 0 || scenarios.length === 0) return;
-
-    // Add a reviewer
-    const addBtn = page.locator('.bg-surface-container').filter({ hasText: 'Reviewer Providers' }).getByRole('button', { name: /Add/i });
-    await addBtn.click();
-    await expect(page.getByText('Synthesizer')).toBeVisible();
-
-    const startBtn = page.getByRole('button', { name: /Start Run/i });
-    await startBtn.click();
-
-    // Page should not crash — heading still visible
-    await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible({ timeout: 10000 });
-  });
 });

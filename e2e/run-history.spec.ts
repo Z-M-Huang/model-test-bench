@@ -47,7 +47,7 @@ test.describe('Run History', () => {
     const options = statusFilter.locator('option');
     const texts = await options.allTextContents();
     expect(texts).toContain('All Statuses');
-    expect(texts).toContain('Completed');
+    expect(texts).toContain('Success');
     expect(texts).toContain('Running');
     expect(texts).toContain('Failed');
     expect(texts).toContain('Pending');

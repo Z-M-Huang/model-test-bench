@@ -160,6 +160,7 @@ function EntryEditor({
 }
 
 export function SubagentEditor({ items, onChange }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   function updateItem(idx: number, patch: Partial<SubagentEntry>) {
     onChange(items.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
   }

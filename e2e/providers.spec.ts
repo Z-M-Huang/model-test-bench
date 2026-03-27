@@ -15,7 +15,7 @@ test.describe('Provider CRUD flow', () => {
   test('provider list page loads with correct heading', async ({ page }) => {
     await page.goto('/providers');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.getByText('Providers')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
   });
 
   test('provider list shows empty state or table', async ({ page }) => {

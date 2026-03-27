@@ -26,6 +26,8 @@ test.describe('Scenario features', () => {
 
   test('scenario list page loads with category groups', async ({ page }) => {
     await gotoScenarioList(page);
+    // Wait for at least one scenario section to render
+    await expect(page.locator('section h3').first()).toBeVisible({ timeout: 10000 });
     // The page shows category sections with headings
     const categoryHeadings = [
       'Reasoning & Logic',
@@ -38,7 +40,7 @@ test.describe('Scenario features', () => {
     ];
     let foundCount = 0;
     for (const heading of categoryHeadings) {
-      const el = page.getByText(heading, { exact: true });
+      const el = page.getByRole('heading', { name: heading, exact: true });
       if (await el.isVisible().catch(() => false)) {
         foundCount++;
       }

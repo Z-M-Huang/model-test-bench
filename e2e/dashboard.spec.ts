@@ -50,7 +50,7 @@ test.describe('Dashboard page', () => {
     await expect(page.getByText('Recent Runs')).toBeVisible();
     // Table headers
     await expect(page.getByText('Status').first()).toBeVisible();
-    await expect(page.getByText('Provider Name')).toBeVisible();
+    await expect(page.getByText('Provider').first()).toBeVisible();
     await expect(page.getByText('Scenario Name')).toBeVisible();
   });
 

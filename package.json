@@ -1,6 +1,6 @@
 {
   "name": "claude-test-bench",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Benchmark AI agent behavior — A/B test CLAUDE.md instructions, compare models, and grade runs with LLM-based evaluation",
   "main": "dist/server/index.js",
@@ -26,6 +26,7 @@
     "dev": "tsc -p tsconfig.server.json --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "npx playwright test",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
     "prepublishOnly": "npm run build"

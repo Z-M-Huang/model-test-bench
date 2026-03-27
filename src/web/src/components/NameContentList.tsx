@@ -96,6 +96,7 @@ function EntryEditor({
 }
 
 export function NameContentList({ items, onChange, label, namePlaceholder, contentPlaceholder }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   function updateItem(idx: number, patch: Partial<NameContentEntry>) {
     onChange(items.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
   }
