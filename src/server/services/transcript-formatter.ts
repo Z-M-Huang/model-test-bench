@@ -42,7 +42,68 @@ export function formatTranscript(messages: readonly SDKMessageRecord[]): Transcr
     const msg = record.message;
     const msgType = msg['type'] as string | undefined;
 
-    if (msgType === 'assistant') {
+    if (msgType === 'text-delta') {
+      // Streaming text chunk — accumulate for transcript
+      const text = msg['text'] as string | undefined;
+      if (text) {
+        const r = appendLine(lines, `[Text] ${text}`, totalChars);
+        totalChars = r.totalChars;
+        truncated = r.truncated;
+        if (looksLikeQuestion(text)) askedClarifyingQuestions = true;
+      }
+    } else if (msgType === 'reasoning-delta') {
+      const text = msg['text'] as string | undefined;
+      if (text) {
+        const r = appendLine(lines, `[Thinking] ${text}`, totalChars);
+        totalChars = r.totalChars;
+        truncated = r.truncated;
+      }
+    } else if (msgType === 'tool-call') {
+      const name = (msg['toolName'] as string) ?? 'unknown_tool';
+      const args = truncateStr(JSON.stringify(msg['args'] ?? ''), MAX_TOOL_INPUT_CHARS);
+      toolCalls.push(name);
+      trackFileAccess(name, msg, filesRead, filesModified);
+      const r = appendLine(lines, `[Tool Call] ${name}: ${args}`, totalChars);
+      totalChars = r.totalChars;
+      truncated = r.truncated;
+    } else if (msgType === 'tool-result') {
+      const output = truncateStr(String(msg['result'] ?? ''), MAX_TOOL_OUTPUT_CHARS);
+      const r = appendLine(lines, `[Tool Result] ${output}`, totalChars);
+      totalChars = r.totalChars;
+      truncated = r.truncated;
+    } else if (msgType === 'step') {
+      // AI SDK step format: { text, toolCalls, toolResults, usage }
+      const stepText = msg['text'] as string | undefined;
+      if (stepText) {
+        const r = appendLine(lines, `[Assistant] ${stepText}`, totalChars);
+        totalChars = r.totalChars;
+        truncated = r.truncated;
+        if (looksLikeQuestion(stepText)) askedClarifyingQuestions = true;
+      }
+      const calls = msg['toolCalls'] as ReadonlyArray<Record<string, unknown>> | undefined;
+      if (Array.isArray(calls)) {
+        for (const call of calls) {
+          if (truncated) break;
+          const name = (call['toolName'] as string) ?? 'unknown_tool';
+          const input = truncateStr(JSON.stringify(call['args'] ?? ''), MAX_TOOL_INPUT_CHARS);
+          toolCalls.push(name);
+          trackFileAccess(name, call, filesRead, filesModified);
+          const r = appendLine(lines, `[Tool Call] ${name}: ${input}`, totalChars);
+          totalChars = r.totalChars;
+          truncated = r.truncated;
+        }
+      }
+      const results = msg['toolResults'] as ReadonlyArray<Record<string, unknown>> | undefined;
+      if (Array.isArray(results)) {
+        for (const tr of results) {
+          if (truncated) break;
+          const output = truncateStr(String(tr['result'] ?? ''), MAX_TOOL_OUTPUT_CHARS);
+          const r = appendLine(lines, `[Tool Result] ${output}`, totalChars);
+          totalChars = r.totalChars;
+          truncated = r.truncated;
+        }
+      }
+    } else if (msgType === 'assistant') {
       const formatted = formatAssistantMessage(msg);
       if (formatted) {
         const result = appendLine(lines, formatted, totalChars);
@@ -163,7 +224,8 @@ function trackFileAccess(
   filesRead: Set<string>,
   filesModified: Set<string>,
 ): void {
-  const input = msg['input'] as Record<string, unknown> | undefined;
+  // Support both Claude SDK format (msg.input) and AI SDK format (msg.args)
+  const input = (msg['input'] ?? msg['args']) as Record<string, unknown> | undefined;
   if (!input) return;
   const filePath = (input['file_path'] ?? input['path'] ?? input['filename']) as string | undefined;
   if (!filePath) return;

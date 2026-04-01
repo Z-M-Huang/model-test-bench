@@ -39,11 +39,11 @@ test.describe('Dashboard page', () => {
   });
 
   test('New Provider card has descriptive text', async ({ page }) => {
-    await expect(page.getByText('Configure environment variables')).toBeVisible();
+    await expect(page.getByText('Configure model provider')).toBeVisible();
   });
 
   test('Start Run card has descriptive text', async ({ page }) => {
-    await expect(page.getByText('Execute a batch process')).toBeVisible();
+    await expect(page.getByText('Execute a test scenario')).toBeVisible();
   });
 
   test('recent runs section renders', async ({ page }) => {

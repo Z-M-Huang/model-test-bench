@@ -2,32 +2,21 @@
   "id": "scenario-carwash-baseline",
   "name": "Car Wash Test — Goal-Oriented Reasoning (Baseline)",
   "category": "reasoning",
-  "claudeMdFiles": [],
-  "rules": [],
-  "skills": [],
-  "subagents": [],
-  "mcpServers": [],
-  "permissionMode": "acceptEdits",
-  "allowedTools": ["Read", "Write", "Edit"],
-  "prompt": "Read the question in question.md. Think through it carefully and write your recommendation with full reasoning to answer.md.",
-  "workspaceFiles": [
-    {
-      "path": "question.md",
-      "content": "# Quick Question\n\nI want to wash my car. The car wash is 50 meters away. Should I walk or drive?"
-    }
-  ],
+  "prompt": "Think through the following question carefully and provide your recommendation with full reasoning.\n\nI want to wash my car. The car wash is 50 meters away. Should I walk or drive?",
+  "systemPrompt": "",
+  "enabledTools": [],
   "expectedAnswer": "You should DRIVE.\n\nThe goal is to wash your car — which means the car needs to be physically present at the car wash. Walking to the car wash accomplishes nothing because your car would still be 50 meters away at home. You must drive the car to the car wash so it can be washed.\n\nThe 50-meter distance is a red herring. Regardless of how short the distance is, the car itself must make the trip.",
   "criticalRequirements": [
     "Must recommend driving (NOT walking)",
     "Must explain that the car needs to be physically present at the car wash to be washed",
     "Must NOT prioritize distance/effort/fuel efficiency over the actual goal of washing the car"
   ],
-  "gradingGuidelines": "Grade this response on the famous 'Car Wash Test' — a viral AI reasoning benchmark from early 2026. Most AI models fail this test by recommending walking because the distance is short (50 meters), missing the obvious physical constraint that the CAR must be at the car wash.\n\nKey evaluation criteria:\n1. CORRECTNESS (most important): Did the agent recommend DRIVING? If the agent recommends walking, it has fundamentally failed the test — score Correctness as 0 regardless of how well-reasoned the walking argument is.\n\n2. GOAL IDENTIFICATION: Did the agent identify the actual goal? The goal is 'wash my car,' which requires the car to be physically present at the car wash. Did the agent make this connection explicitly, or did it treat this as a simple 'how should I travel 50 meters' question?\n\n3. REASONING QUALITY: Did the agent explain WHY driving is necessary (car must be at the car wash)? Did it recognize the distance as a red herring? Did it avoid over-analyzing fuel costs, exercise benefits, or environmental impact of a 50-meter drive?\n\nCOMMON FAILURE MODES TO PENALIZE:\n- Recommending walking because 50 meters is a short distance (critical failure — missed the entire point)\n- Suggesting 'it depends' or presenting walk vs drive as equally valid options\n- Recommending walking but mentioning 'oh but you'd need to bring the car' as an afterthought\n- Over-analyzing the distance (fuel cost, health benefits, carbon footprint) instead of focusing on the goal\n- Giving a hedged answer that doesn't clearly state 'drive'\n\nNOTE FOR COMPARISON: This is the BASELINE scenario (no CLAUDE.md). Pay attention to whether the agent naturally identifies the goal constraint or falls into the distance-optimization trap. This structural observation helps compare against the instruction-guided version.",
+  "gradingGuidelines": "Grade this response on the famous 'Car Wash Test' — a viral AI reasoning benchmark. Most AI models fail this test by recommending walking because the distance is short (50 meters), missing the obvious physical constraint that the CAR must be at the car wash.\n\nKey evaluation criteria:\n1. CORRECTNESS (most important): Did the model recommend DRIVING? If it recommends walking, it has fundamentally failed — score Correctness as 0.\n\n2. GOAL IDENTIFICATION: Did the model identify the actual goal? The goal is 'wash my car,' which requires the car to be physically present at the car wash.\n\n3. REASONING QUALITY: Did the model explain WHY driving is necessary? Did it recognize the distance as a red herring?\n\nCOMMON FAILURE MODES TO PENALIZE:\n- Recommending walking because 50 meters is a short distance (critical failure)\n- Suggesting 'it depends' or presenting walk vs drive as equally valid\n- Over-analyzing the distance (fuel cost, health benefits, carbon footprint) instead of focusing on the goal\n- Giving a hedged answer that doesn't clearly state 'drive'\n\nNOTE: This is the BASELINE scenario (no system prompt). Compare against the instruction-guided version to measure whether system prompt instructions change behavior.",
   "scoringDimensions": [
-    { "name": "Correctness", "weight": 0.5, "description": "Did the agent recommend driving? Walking is wrong — the car must be at the car wash." },
-    { "name": "Goal Identification", "weight": 0.3, "description": "Did the agent identify that the car must be physically present at the car wash?" },
+    { "name": "Correctness", "weight": 0.5, "description": "Did the model recommend driving? Walking is wrong — the car must be at the car wash." },
+    { "name": "Goal Identification", "weight": 0.3, "description": "Did the model identify that the car must be physically present at the car wash?" },
     { "name": "Reasoning Quality", "weight": 0.2, "description": "Clear explanation, recognized the distance as irrelevant, avoided over-analysis" }
   ],
-  "createdAt": "2026-03-24T00:00:00.000Z",
-  "updatedAt": "2026-03-24T00:00:00.000Z"
+  "createdAt": "2026-03-31T00:00:00.000Z",
+  "updatedAt": "2026-03-31T00:00:00.000Z"
 }

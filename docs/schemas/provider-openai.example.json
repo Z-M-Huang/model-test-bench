@@ -1,0 +1,11 @@
+{
+  "id": "provider-openai-gpt4",
+  "name": "OpenAI GPT-4o",
+  "description": "OpenAI GPT-4o via API",
+  "providerName": "openai",
+  "model": "gpt-4o",
+  "apiKey": "sk-your-openai-key-here",
+  "timeoutSeconds": 300,
+  "createdAt": "2026-03-31T00:00:00.000Z",
+  "updatedAt": "2026-03-31T00:00:00.000Z"
+}

@@ -1,45 +1,20 @@
 // ---------------------------------------------------------------------------
-// ScenarioRunner — executes a single run via the Claude Agent SDK
+// AiSdkRunner — executes a single run via Vercel AI SDK (streaming)
 // ---------------------------------------------------------------------------
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
-import type {
-  Options as SDKOptions,
-  SDKMessage,
-  ThinkingConfig as SDKThinkingConfig,
-} from '@anthropic-ai/claude-agent-sdk';
+import { streamText, stepCountIs } from 'ai';
 import type { IRunner, RunCallbacks } from '../interfaces/runner.js';
-import type { IWorkspaceBuilder } from '../interfaces/workspace.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { Provider, Scenario, Run, SDKMessageRecord, ThinkingConfig } from '../types/index.js';
-import { buildRunEnv } from './env-builder.js';
-import { buildAgentsMap, buildMcpMap } from './agent-mapper.js';
-
-// ---------------------------------------------------------------------------
-// Thinking config conversion
-// ---------------------------------------------------------------------------
-
-function toSDKThinking(cfg: ThinkingConfig | undefined): SDKThinkingConfig | undefined {
-  if (!cfg) return undefined;
-  switch (cfg.kind) {
-    case 'adaptive':
-      return { type: 'adaptive' };
-    case 'enabled':
-      return { type: 'enabled', budgetTokens: cfg.budgetTokens };
-    case 'disabled':
-      return { type: 'disabled' };
-  }
-}
+import type { Provider, Scenario, Run, SDKMessageRecord } from '../types/index.js';
+import { createModel } from './model-factory.js';
+import { getEnabledTools } from './tools.js';
 
 // ---------------------------------------------------------------------------
 // Implementation
 // ---------------------------------------------------------------------------
 
-export class ScenarioRunner implements IRunner {
-  constructor(
-    private readonly workspace: IWorkspaceBuilder,
-    private readonly logger: ILogger,
-  ) {}
+export class AiSdkRunner implements IRunner {
+  constructor(private readonly logger: ILogger) {}
 
   async executeRun(
     provider: Provider,
@@ -53,100 +28,68 @@ export class ScenarioRunner implements IRunner {
     const abortController = externalAbortController ?? new AbortController();
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let ws: { workspacePath: string; cleanup: () => Promise<void> } | undefined;
 
     try {
-      // Create workspace first — timeout starts only after workspace is ready
-      ws = await this.workspace.createWorkspace(scenario);
-
-      // Set up timeout after workspace creation succeeds
+      // Set up timeout
       const timeoutMs = provider.timeoutSeconds * 1000;
       timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
       callbacks.onStatusChange('running');
 
-      // Build SDK options — provider/model/thinking/effort from provider, agent config from scenario
-      const env = buildRunEnv(provider.provider);
-      const agents = await buildAgentsMap(scenario.subagents);
-      const mcpServers = buildMcpMap(scenario.mcpServers);
+      // Build model and tools
+      const model = createModel(provider);
+      const tools = getEnabledTools(scenario.enabledTools);
+      const hasTools = Object.keys(tools).length > 0;
 
-      const options: SDKOptions = {
-        cwd: ws.workspacePath,
-        model: provider.provider.model,
-        env,
-        settingSources: ['project'],
-        permissionMode: scenario.permissionMode,
-        allowDangerouslySkipPermissions: scenario.permissionMode === 'bypassPermissions',
-        sandbox: { enabled: true, autoAllowBashIfSandboxed: true },
-        persistSession: false,
-        abortController,
-        maxTurns: scenario.maxTurns,
-        thinking: toSDKThinking(provider.thinking),
-        effort: provider.effort === 'none' ? undefined : provider.effort,
-      };
+      // Stream the query
+      const result = streamText({
+        model,
+        system: scenario.systemPrompt || undefined,
+        prompt: scenario.prompt,
+        temperature: provider.temperature,
+        maxOutputTokens: provider.maxTokens,
+        topP: provider.topP,
+        tools: hasTools ? tools : undefined,
+        stopWhen: stepCountIs(hasTools ? 10 : 1),
+        abortSignal: abortController.signal,
+      });
 
-      if (scenario.allowedTools && scenario.allowedTools.length > 0) {
-        options.allowedTools = [...scenario.allowedTools];
-      }
-
-      if (scenario.disallowedTools && scenario.disallowedTools.length > 0) {
-        options.disallowedTools = [...scenario.disallowedTools];
-      }
-
-      if (Object.keys(agents).length > 0) {
-        options.agents = agents;
-      }
-
-      if (Object.keys(mcpServers).length > 0) {
-        options.mcpServers = mcpServers;
-      }
-
-      // Execute query
-      const q = query({ prompt: scenario.prompt, options });
-
-      for await (const msg of q) {
+      // Consume the stream, forwarding each part to the frontend via callbacks
+      for await (const part of result.fullStream) {
         const record: SDKMessageRecord = {
           timestamp: new Date().toISOString(),
-          message: msg as unknown as Record<string, unknown>,
+          message: part as unknown as Record<string, unknown>,
         };
         messages.push(record);
         callbacks.onMessage(record);
       }
 
-      // Find result message
-      const resultMsg = this.findResultMessage(messages);
+      // Await final aggregated values
+      const finalText = await result.text;
+      const usage = await result.usage;
+      const steps = await result.steps;
       const durationMs = Date.now() - startTime;
 
-      if (resultMsg && resultMsg.subtype === 'success') {
-        const successResult = resultMsg as ResultSuccessShape;
-        const completedRun: Run = {
-          ...run,
-          status: 'completed',
-          messages,
-          resultText: successResult.result ?? '',
-          totalCostUsd: successResult.total_cost_usd ?? 0,
-          durationMs,
-          numTurns: successResult.num_turns ?? 0,
-          updatedAt: new Date().toISOString(),
-        };
-        callbacks.onStatusChange('completed');
-        return completedRun;
-      }
-
-      // Error result
-      const errorResult = resultMsg as ResultErrorShape | undefined;
-      const failedRun: Run = {
+      const completedRun: Run = {
         ...run,
-        status: 'failed',
+        status: 'completed',
         messages,
-        resultText: '',
-        totalCostUsd: errorResult?.total_cost_usd ?? 0,
+        resultText: finalText,
+        totalCostUsd: 0,
         durationMs,
-        numTurns: errorResult?.num_turns ?? 0,
-        error: errorResult?.errors?.join('; ') ?? 'Unknown error — no result message',
+        numTurns: steps.length,
         updatedAt: new Date().toISOString(),
       };
-      callbacks.onStatusChange('failed');
-      return failedRun;
+      callbacks.onStatusChange('completed');
+
+      this.logger.info('Run completed', {
+        runId: run.id,
+        durationMs,
+        inputTokens: usage?.inputTokens ?? 0,
+        outputTokens: usage?.outputTokens ?? 0,
+        steps: steps.length,
+      });
+
+      return completedRun;
     } catch (err) {
       const durationMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -167,48 +110,6 @@ export class ScenarioRunner implements IRunner {
       return errorRun;
     } finally {
       if (timeoutId !== undefined) clearTimeout(timeoutId);
-      if (ws) {
-        await ws.cleanup().catch((cleanupErr) => {
-          this.logger.warn('Failed to clean up workspace', {
-            runId: run.id,
-            error: String(cleanupErr),
-          });
-        });
-      }
     }
   }
-
-  // ─── Helpers ────────────────────────────────────────────────────────
-
-  private findResultMessage(
-    messages: readonly SDKMessageRecord[],
-  ): ResultShape | undefined {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i].message;
-      if (msg['type'] === 'result') {
-        return msg as unknown as ResultShape;
-      }
-    }
-    return undefined;
-  }
 }
-
-// Internal shapes for extracting result fields from SDK messages
-
-interface ResultSuccessShape {
-  type: 'result';
-  subtype: 'success';
-  result: string;
-  total_cost_usd: number;
-  num_turns: number;
-}
-
-interface ResultErrorShape {
-  type: 'result';
-  subtype: string;
-  total_cost_usd: number;
-  num_turns: number;
-  errors: string[];
-}
-
-type ResultShape = ResultSuccessShape | ResultErrorShape;

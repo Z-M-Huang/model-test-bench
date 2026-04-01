@@ -104,21 +104,14 @@ export function ScenarioList(): React.JSX.Element {
                         ? `"${sc.prompt.slice(0, 160)}${sc.prompt.length > 160 ? '...' : ''}"`
                         : t('scenarios.noPrompt')}
                     </p>
-                    {/* Agent config summary */}
-                    {(() => {
-                      const parts: string[] = [];
-                      if ((sc.claudeMdFiles ?? []).length > 0) parts.push(t('scenarios.claudeMdCount', { count: sc.claudeMdFiles.length }));
-                      if ((sc.rules ?? []).length > 0) parts.push(t('scenarios.ruleCount', { count: sc.rules.length }));
-                      if ((sc.subagents ?? []).length > 0) parts.push(t('scenarios.subagentCount', { count: sc.subagents.length }));
-                      if ((sc.mcpServers ?? []).length > 0) parts.push(t('scenarios.mcpCount', { count: sc.mcpServers.length }));
-                      return parts.length > 0 ? (
-                        <div className="text-[10px] text-on-surface-variant mb-3 flex flex-wrap gap-1.5">
-                          {parts.map((p) => (
-                            <span key={p} className="px-1.5 py-0.5 rounded bg-surface-container-high border border-outline-variant/10">{p}</span>
-                          ))}
-                        </div>
-                      ) : null;
-                    })()}
+                    {/* Enabled tools summary */}
+                    {(sc.enabledTools ?? []).length > 0 && (
+                      <div className="text-[10px] text-on-surface-variant mb-3 flex flex-wrap gap-1.5">
+                        {(sc.enabledTools ?? []).map((tool) => (
+                          <span key={tool} className="px-1.5 py-0.5 rounded bg-surface-container-high border border-outline-variant/10 font-mono">{tool}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between pt-3 border-t border-outline-variant/10">
                       <div className="flex gap-4">
                         <div className="flex flex-col">

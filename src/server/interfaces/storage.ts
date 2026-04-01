@@ -9,7 +9,7 @@ import type {
 } from '../types/index.js';
 
 export interface ProviderFilter {
-  readonly provider?: 'api' | 'oauth';
+  readonly provider?: string;
   readonly model?: string;
 }
 

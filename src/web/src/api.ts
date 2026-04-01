@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Typed API client for the Claude Test Bench server
+// Typed API client for the Model Test Bench server
 // ---------------------------------------------------------------------------
 
 import type {

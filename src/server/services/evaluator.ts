@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// Evaluator — orchestrates evaluation pipeline via SDK query()
+// Evaluator — orchestrates evaluation pipeline via Vercel AI SDK
 // ---------------------------------------------------------------------------
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { generateText } from 'ai';
 import type { IEvaluator, EvaluationCallbacks, EvalMessageInfo } from '../interfaces/evaluator.js';
 import type {
   Run,
@@ -16,7 +16,7 @@ import type {
   IndividualEvaluation,
   SDKMessageRecord,
 } from '../types/index.js';
-import { buildRunEnv } from './env-builder.js';
+import { createModel } from './model-factory.js';
 import { formatTranscript } from './transcript-formatter.js';
 import { parseAllInstructions } from './instruction-parser.js';
 import {
@@ -41,18 +41,6 @@ import {
 import type { EvaluatorAccumulator } from './eval-helpers.js';
 
 // ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface QueryResultMessage {
-  readonly type: 'result';
-  readonly subtype: string;
-  readonly result?: string;
-  readonly total_cost_usd?: number;
-  readonly num_turns?: number;
-}
-
-// ---------------------------------------------------------------------------
 // Implementation
 // ---------------------------------------------------------------------------
 
@@ -68,10 +56,11 @@ export class EvaluationOrchestrator implements IEvaluator {
     callbacks.onProgress('preparing', 'Formatting transcript and parsing instructions...');
 
     const { text: transcript, summary } = formatTranscript(run.messages);
-    const instructions = parseAllInstructions([
-      ...scenario.claudeMdFiles.map((c) => ({ content: c.content, source: `CLAUDE.md (${c.role})` })),
-      ...scenario.rules.map((r) => ({ content: r.content, source: `rule:${r.name}` })),
-    ]);
+    const instructions = parseAllInstructions(
+      scenario.systemPrompt
+        ? [{ content: scenario.systemPrompt, source: 'system_prompt' }]
+        : [],
+    );
 
     const accumulators: EvaluatorAccumulator[] = request.evaluators.map((e) => ({
       role: e.role, costUsd: 0, tokensIn: 0, tokensOut: 0, rounds: 0,
@@ -124,7 +113,7 @@ export class EvaluationOrchestrator implements IEvaluator {
       id: '', runId: run.id, status: 'completed', evaluators: request.evaluators, rounds,
       answerComparison: buildAnswerComparison(accumulators),
       criticalResults: buildCriticalResults(accumulators, scenario),
-      setupCompliance: { instructionCompliance: mergeCompliance(accumulators), skillUsage: [], subagentUsage: [] },
+      setupCompliance: { instructionCompliance: mergeCompliance(accumulators) },
       synthesis: {
         dimensionScores: synthResult.dimensionScores ?? {}, weightedTotal: synthResult.weightedTotal ?? 0,
         confidence: synthResult.confidence ?? 0, dissenting: synthResult.dissenting ?? [],
@@ -205,7 +194,7 @@ export class EvaluationOrchestrator implements IEvaluator {
     return parseSynthesisResponse(resp.text);
   }
 
-  // ─── SDK query wrapper ───────────────────────────────────────────────
+  // ─── AI SDK query wrapper ─────────────────────────────────────────────
 
   private async runQuery(
     evaluator: EvaluatorConfig,
@@ -213,42 +202,27 @@ export class EvaluationOrchestrator implements IEvaluator {
     callbacks: EvaluationCallbacks,
     info: EvalMessageInfo,
   ): Promise<{ text: string; costUsd: number }> {
-    const q = query({
-      prompt,
-      options: {
-        env: buildRunEnv(evaluator.provider),
-        model: evaluator.provider.model,
-        tools: [],
-        maxTurns: 3,
-        permissionMode: 'dontAsk',
-        persistSession: false,
-      },
+    const model = createModel({
+      providerName: evaluator.providerName,
+      model: evaluator.model,
+      apiKey: evaluator.apiKey,
+      baseUrl: evaluator.baseUrl,
     });
 
-    let resultText = '';
-    let costUsd = 0;
+    const result = await generateText({ model, prompt, maxOutputTokens: 4096 });
 
-    for await (const msg of q) {
-      const record = msg as unknown as Record<string, unknown>;
-      const sdkRecord: SDKMessageRecord = {
-        timestamp: new Date().toISOString(),
-        message: record,
-      };
-      callbacks.onMessage(info, sdkRecord);
+    const record: SDKMessageRecord = {
+      timestamp: new Date().toISOString(),
+      message: {
+        type: 'eval_response',
+        text: result.text,
+        usage: result.usage,
+      } as unknown as Record<string, unknown>,
+    };
+    callbacks.onMessage(info, record);
 
-      if (record['type'] === 'result') {
-        const resultMsg = record as unknown as QueryResultMessage;
-        costUsd = resultMsg.total_cost_usd ?? 0;
-        if (resultMsg.subtype !== 'success') {
-          const errorDetail = resultMsg.result ?? 'unknown error';
-          throw new Error(
-            `SDK query failed (subtype: ${resultMsg.subtype}): ${errorDetail}`,
-          );
-        }
-        resultText = resultMsg.result ?? '';
-      }
-    }
-
-    return { text: resultText, costUsd };
+    // Token-based cost calculation (provider-specific pricing TBD)
+    const costUsd = 0;
+    return { text: result.text, costUsd };
   }
 }

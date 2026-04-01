@@ -5,7 +5,8 @@ import { api } from '../api.js';
 import type { Provider } from '../types.js';
 import { formatDate } from '../i18n/format.js';
 
-function maskKey(key: string): string {
+function maskKey(key: string | undefined): string {
+  if (!key) return '****';
   if (key.length <= 6) return '****';
   return '****' + key.slice(-6);
 }
@@ -94,11 +95,6 @@ export function ProviderList(): React.JSX.Element {
               )}
               {providers.map((provider, i) => {
                 const ri = rowIcons[i % rowIcons.length];
-                const extra = provider as unknown as Record<string, unknown>;
-                const providerKind = provider.provider?.kind ?? (extra.providerType as string) ?? 'api';
-                const providerModel = provider.provider?.model ?? (extra.model as string) ?? '';
-                const isApi = providerKind === 'api';
-                const providerLabel = isApi ? t('providers.anthropicApi') : t('providers.claudeCodeAuth');
                 return (
                   <tr
                     key={provider.id}
@@ -123,23 +119,20 @@ export function ProviderList(): React.JSX.Element {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[0.7rem] px-2 py-0.5 w-fit rounded-full bg-surface-container-high text-tertiary-fixed-dim border border-outline-variant/20 mb-1">
-                          {providerLabel}
+                        <span className="text-[0.7rem] px-2 py-0.5 w-fit rounded-full bg-surface-container-high text-tertiary-fixed-dim border border-outline-variant/20 mb-1 capitalize">
+                          {provider.providerName}
                         </span>
-                        {isApi && provider.provider?.kind === 'api' && (
+                        {provider.baseUrl && (
                           <div className="text-[0.6rem] font-mono text-on-surface-variant flex flex-col">
-                            <span>
-                              URL:{' '}
-                              {new URL(provider.provider.baseUrl).hostname}
-                            </span>
-                            <span>KEY: {maskKey(provider.provider.apiKey)}</span>
+                            <span>URL: {(() => { try { return new URL(provider.baseUrl).hostname; } catch { return provider.baseUrl; } })()}</span>
                           </div>
                         )}
+                        <span className="text-[0.6rem] font-mono text-on-surface-variant">KEY: {maskKey(provider.apiKey)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-[0.75rem] text-on-surface-variant">
-                        {providerModel}
+                        {provider.model}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[0.75rem] text-on-surface-variant">

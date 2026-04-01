@@ -2,18 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api.js';
-import type { Scenario, ScenarioCategory, WorkspaceFile, ScoringDimension } from '../types.js';
+import type { Scenario, ScenarioCategory, ScoringDimension } from '../types.js';
 import { CodeEditor } from '../components/CodeEditor.js';
 import { DynamicList } from '../components/DynamicList.js';
 import { WeightIndicator } from '../components/WeightIndicator.js';
-import { AgentConfigSection } from '../components/AgentConfigSection.js';
-import type { AgentConfigValues } from '../components/AgentConfigSection.js';
-import type { NameContentEntry } from '../components/NameContentList.js';
 
-const ALL_TOOLS = [
-  'Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep',
-  'WebSearch', 'WebFetch', 'NotebookEdit',
-];
+const AVAILABLE_TOOLS = ['read_file', 'search_file', 'web_search'] as const;
 
 const categories: ScenarioCategory[] = [
   'planning', 'instruction-following', 'reasoning', 'tool-strategy',
@@ -23,43 +17,19 @@ const categories: ScenarioCategory[] = [
 interface FormState {
   name: string;
   category: ScenarioCategory;
-  agentConfig: AgentConfigValues;
   prompt: string;
-  workspaceFiles: WorkspaceFile[];
+  systemPrompt: string;
+  enabledTools: string[];
   expectedAnswer: string;
   criticalRequirements: string[];
   gradingGuidelines: string;
   scoringDimensions: ScoringDimension[];
 }
 
-const emptyAgentConfig: AgentConfigValues = {
-  claudeMdFiles: [],
-  rules: [],
-  skills: [],
-  subagents: [],
-  mcpServers: [],
-  permissionMode: 'acceptEdits',
-  maxTurns: undefined,
-  deniedTools: [],
-  disallowedTools: [],
-};
-
 const emptyForm: FormState = {
-  name: '', category: 'reasoning', agentConfig: { ...emptyAgentConfig }, prompt: '', workspaceFiles: [],
+  name: '', category: 'reasoning', prompt: '', systemPrompt: '', enabledTools: [],
   expectedAnswer: '', criticalRequirements: [], gradingGuidelines: '', scoringDimensions: [],
 };
-
-/** Convert API allowedTools to UI deniedTools. */
-function toDenied(allowedTools: readonly string[] | undefined): string[] {
-  if (!allowedTools || allowedTools.length === 0) return [];
-  return ALL_TOOLS.filter((t) => !allowedTools.includes(t));
-}
-
-/** Convert UI deniedTools to API allowedTools. */
-function toAllowed(deniedTools: string[]): string[] | undefined {
-  if (deniedTools.length === 0) return undefined;
-  return ALL_TOOLS.filter((t) => !deniedTools.includes(t));
-}
 
 function SectionHead({ icon, title }: { icon: string; title: string }) {
   return (
@@ -87,19 +57,10 @@ export function ScenarioEditor(): React.JSX.Element {
     api.scenarios.get(id).then((sc) => {
       setForm({
         name: sc.name, category: sc.category,
-        agentConfig: {
-          claudeMdFiles: sc.claudeMdFiles.map((f) => ({ ...f })),
-          rules: sc.rules.map((r) => ({ ...r })) as NameContentEntry[],
-          skills: sc.skills.map((s) => ({ ...s })) as NameContentEntry[],
-          subagents: sc.subagents.map((s) => ({ ...s })),
-          mcpServers: sc.mcpServers.map((s) => ({ ...s })),
-          permissionMode: sc.permissionMode,
-          maxTurns: sc.maxTurns,
-          deniedTools: toDenied(sc.allowedTools),
-          disallowedTools: sc.disallowedTools ? [...sc.disallowedTools] : [],
-        },
         prompt: sc.prompt,
-        workspaceFiles: [...sc.workspaceFiles], expectedAnswer: sc.expectedAnswer,
+        systemPrompt: sc.systemPrompt,
+        enabledTools: [...sc.enabledTools],
+        expectedAnswer: sc.expectedAnswer,
         criticalRequirements: [...sc.criticalRequirements],
         gradingGuidelines: sc.gradingGuidelines, scoringDimensions: [...sc.scoringDimensions],
       });
@@ -113,19 +74,7 @@ export function ScenarioEditor(): React.JSX.Element {
   async function handleSave() {
     setSaving(true);
     try {
-      const { agentConfig, ...rest } = form;
-      const payload: Partial<Scenario> = {
-        ...rest,
-        claudeMdFiles: agentConfig.claudeMdFiles,
-        rules: agentConfig.rules,
-        skills: agentConfig.skills,
-        subagents: agentConfig.subagents,
-        mcpServers: agentConfig.mcpServers,
-        permissionMode: agentConfig.permissionMode,
-        maxTurns: agentConfig.maxTurns,
-        allowedTools: toAllowed(agentConfig.deniedTools),
-        disallowedTools: agentConfig.disallowedTools.length > 0 ? agentConfig.disallowedTools : undefined,
-      };
+      const payload: Partial<Scenario> = { ...form };
       if (isNew) {
         const created = await api.scenarios.create(payload);
         navigate(`/scenarios/${created.id}`);
@@ -135,14 +84,17 @@ export function ScenarioEditor(): React.JSX.Element {
     } finally { setSaving(false); }
   }
 
-  function updateWsFile(i: number, patch: Partial<WorkspaceFile>) {
-    set('workspaceFiles', form.workspaceFiles.map((f, idx) => (idx === i ? { ...f, ...patch } : f)));
-  }
   function updateReq(i: number, v: string) {
     set('criticalRequirements', form.criticalRequirements.map((r, idx) => (idx === i ? v : r)));
   }
   function updateDim(i: number, patch: Partial<ScoringDimension>) {
     set('scoringDimensions', form.scoringDimensions.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
+  }
+
+  function toggleTool(tool: string) {
+    set('enabledTools', form.enabledTools.includes(tool)
+      ? form.enabledTools.filter((t) => t !== tool)
+      : [...form.enabledTools, tool]);
   }
 
   if (loading) return <p className="text-on-surface-variant py-12 text-center">{t('scenarioEditor.loadingScenario')}</p>;
@@ -168,7 +120,7 @@ export function ScenarioEditor(): React.JSX.Element {
       </div>
 
       <div className="grid grid-cols-12 gap-6">
-        {/* Left Column — sticky */}
+        {/* Left Column -- sticky */}
         <section className="col-span-12 lg:col-span-4">
           <div className="lg:sticky lg:top-6 space-y-6">
             {/* Basic Info */}
@@ -231,10 +183,13 @@ export function ScenarioEditor(): React.JSX.Element {
           </div>
         </section>
 
-        {/* Right Column — scrolls naturally */}
+        {/* Right Column -- scrolls naturally */}
         <section className="col-span-12 lg:col-span-8 space-y-6">
-          {/* Agent Config */}
-          <AgentConfigSection value={form.agentConfig} onChange={(v) => set('agentConfig', v)} />
+          {/* System Prompt */}
+          <div className="bg-surface-container p-5 rounded-lg space-y-4">
+            <SectionHead icon="psychology" title={t('scenarioEditor.systemPrompt')} />
+            <CodeEditor value={form.systemPrompt} onChange={(v) => set('systemPrompt', v)} placeholder="System prompt for the model..." rows={6} />
+          </div>
 
           {/* User Prompt */}
           <div className="bg-surface-container p-5 rounded-lg space-y-4">
@@ -242,19 +197,37 @@ export function ScenarioEditor(): React.JSX.Element {
             <CodeEditor value={form.prompt} onChange={(v) => set('prompt', v)} placeholder="Enter the user test prompt here..." rows={8} />
           </div>
 
-          {/* Workspace Files */}
+          {/* Enabled Tools */}
           <div className="bg-surface-container p-5 rounded-lg space-y-4">
-            <SectionHead icon="folder_open" title={t('scenarioEditor.workspaceFiles')} />
-            <DynamicList label="" items={form.workspaceFiles}
-              onAdd={() => set('workspaceFiles', [...form.workspaceFiles, { path: '', content: '' }])}
-              onRemove={(i) => set('workspaceFiles', form.workspaceFiles.filter((_, idx) => idx !== i))}
-              renderItem={(file, i) => (
-                <div className="space-y-2">
-                  <input type="text" value={file.path} onChange={(e) => updateWsFile(i, { path: e.target.value })} placeholder="src/path/to/file.ts" className="w-full bg-surface-container-high border-none rounded text-[10px] font-mono text-on-surface-variant py-1.5 px-2 focus:ring-1 focus:ring-primary/40" />
-                  <CodeEditor value={file.content} onChange={(v) => updateWsFile(i, { content: v })} placeholder="File content..." rows={4} />
-                </div>
-              )}
-            />
+            <SectionHead icon="build" title={t('scenarioEditor.enabledTools')} />
+            <p className="text-[0.65rem] text-on-surface-variant -mt-2">
+              {t('scenarioEditor.enabledToolsHelp')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_TOOLS.map((tool) => {
+                const enabled = form.enabledTools.includes(tool);
+                return (
+                  <label
+                    key={tool}
+                    className={
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors border ' +
+                      (enabled
+                        ? 'bg-primary-container/20 text-primary border-primary/30'
+                        : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20 hover:border-outline-variant/40')
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={enabled}
+                      onChange={() => toggleTool(tool)}
+                    />
+                    {enabled && <span className="material-symbols-outlined" style={{ fontSize: '0.75rem' }}>check</span>}
+                    {tool}
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </section>
       </div>

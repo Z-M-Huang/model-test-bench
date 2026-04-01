@@ -6,8 +6,7 @@ import http from 'node:http';
 import type { LogLevel } from '../src/server/interfaces/logger.js';
 import { JsonLogger } from '../src/server/services/logger.js';
 import { JsonFileStorage } from '../src/server/services/storage.js';
-import { WorkspaceBuilder } from '../src/server/services/workspace.js';
-import { ScenarioRunner } from '../src/server/services/runner.js';
+import { AiSdkRunner } from '../src/server/services/runner.js';
 import { EvaluationOrchestrator } from '../src/server/services/evaluator.js';
 import { createApp } from '../src/server/index.js';
 import { seedIfEmpty } from '../src/server/services/seeder.js';
@@ -71,6 +70,19 @@ function parseArgs(argv: string[]): CliArgs {
 
 import { checkForUpdate } from '../src/server/services/update-checker.js';
 
+// ─── Existing instance check ─────────────────────────────────────────
+
+async function checkExistingInstance(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) });
+    if (!res.ok) return false;
+    const body = await res.json() as Record<string, unknown>;
+    return body.status === 'ok';
+  } catch {
+    return false;
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -84,8 +96,8 @@ async function main(): Promise<void> {
 
   const cliArgs = parseArgs(process.argv);
 
-  const basePath = path.join(process.cwd(), '.claude-test-bench');
-  const logFilePath = path.join(basePath, 'logs', 'ctb.log');
+  const basePath = path.join(process.cwd(), '.model-test-bench');
+  const logFilePath = path.join(basePath, 'logs', 'mtb.log');
 
   const logger = new JsonLogger(cliArgs.logLevel, {}, undefined, logFilePath);
 
@@ -93,20 +105,46 @@ async function main(): Promise<void> {
 
   await seedIfEmpty(storage, logger);
 
-  const workspace = new WorkspaceBuilder();
-  const runner = new ScenarioRunner(workspace, logger);
+  const runner = new AiSdkRunner(logger);
   const evaluator = new EvaluationOrchestrator();
+
+  const url = `http://localhost:${cliArgs.port}`;
+
+  // Check if an existing instance is already running on this port
+  const existing = await checkExistingInstance(url);
+  if (existing) {
+    console.log(`Model Test Bench is already running at ${url}`);
+    if (cliArgs.open) {
+      import('open')
+        .then((mod) => mod.default(url))
+        .catch(() => { /* ignore */ });
+      // Give the browser a moment to open before exiting
+      setTimeout(() => process.exit(0), 500);
+    } else {
+      process.exit(0);
+    }
+    return;
+  }
 
   const app = createApp({ storage, logger, runner, evaluator });
   const server = http.createServer(app);
 
-  const url = `http://localhost:${cliArgs.port}`;
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      // Port taken by something else (not our health endpoint)
+      console.error(
+        `Port ${cliArgs.port} is in use by another application.\n` +
+        `Try a different port: mtb --port ${cliArgs.port + 1}`,
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
 
   server.listen(cliArgs.port, () => {
     logger.info('Server started', { port: cliArgs.port, url });
 
     if (cliArgs.open) {
-      // Dynamic import to handle ESM 'open' package
       import('open')
         .then((mod) => mod.default(url))
         .catch((err: Error) => {

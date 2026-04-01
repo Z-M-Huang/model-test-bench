@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Request, Response } from 'express';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { Provider, ProviderConfig } from '../types/index.js';
+import type { Provider } from '../types/index.js';
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -18,26 +18,15 @@ function maskSecret(value: string): string {
 }
 
 function maskProvider(provider: Provider): Record<string, unknown> {
-  const cfg = { ...provider.provider };
-  if (cfg.kind === 'api') {
-    return {
-      ...provider,
-      provider: { ...cfg, apiKey: maskSecret(cfg.apiKey) },
-    };
-  }
-  // oauth
-  return {
-    ...provider,
-    provider: { ...cfg, oauthToken: maskSecret(cfg.oauthToken) },
-  };
+  return { ...provider, apiKey: maskSecret(provider.apiKey) };
 }
 
 function maskProviderMetadata(provider: Provider): Record<string, unknown> {
   return {
     id: provider.id,
     name: provider.name,
-    providerType: provider.provider.kind,
-    model: provider.provider.model,
+    providerName: provider.providerName,
+    model: provider.model,
     createdAt: provider.createdAt,
   };
 }
@@ -45,36 +34,6 @@ function maskProviderMetadata(provider: Provider): Record<string, unknown> {
 interface ValidationError {
   readonly field: string;
   readonly message: string;
-}
-
-function validateProviderConfig(providerCfg: unknown): ValidationError[] {
-  const errors: ValidationError[] = [];
-  if (typeof providerCfg !== 'object' || providerCfg === null) {
-    errors.push({ field: 'provider', message: 'provider is required and must be an object' });
-    return errors;
-  }
-  const p = providerCfg as Record<string, unknown>;
-  if (p.kind !== 'api' && p.kind !== 'oauth') {
-    errors.push({ field: 'provider.kind', message: "provider.kind must be 'api' or 'oauth'" });
-    return errors;
-  }
-  if (typeof p.model !== 'string' || p.model.length === 0) {
-    errors.push({ field: 'provider.model', message: 'provider.model is required' });
-  }
-  if (p.kind === 'api') {
-    if (typeof p.apiKey !== 'string' || p.apiKey.length === 0) {
-      errors.push({ field: 'provider.apiKey', message: 'provider.apiKey is required for api provider' });
-    }
-    if (typeof p.baseUrl !== 'string' || p.baseUrl.length === 0) {
-      errors.push({ field: 'provider.baseUrl', message: 'provider.baseUrl is required for api provider' });
-    }
-  }
-  if (p.kind === 'oauth') {
-    if (typeof p.oauthToken !== 'string' || p.oauthToken.length === 0) {
-      errors.push({ field: 'provider.oauthToken', message: 'provider.oauthToken is required for oauth provider' });
-    }
-  }
-  return errors;
 }
 
 function validateProviderBody(body: unknown): ValidationError[] {
@@ -88,12 +47,28 @@ function validateProviderBody(body: unknown): ValidationError[] {
   if (typeof b.name !== 'string' || b.name.trim().length === 0) {
     errors.push({ field: 'name', message: 'name is required' });
   }
-  errors.push(...validateProviderConfig(b.provider));
-
+  if (typeof b.providerName !== 'string' || b.providerName.trim().length === 0) {
+    errors.push({ field: 'providerName', message: 'providerName is required' });
+  }
+  if (typeof b.model !== 'string' || b.model.trim().length === 0) {
+    errors.push({ field: 'model', message: 'model is required' });
+  }
+  if (typeof b.apiKey !== 'string' || b.apiKey.trim().length === 0) {
+    errors.push({ field: 'apiKey', message: 'apiKey is required' });
+  }
   if (b.timeoutSeconds !== undefined) {
     if (typeof b.timeoutSeconds !== 'number' || b.timeoutSeconds <= 0) {
       errors.push({ field: 'timeoutSeconds', message: 'timeoutSeconds must be a positive number' });
     }
+  }
+  if (b.temperature !== undefined && (typeof b.temperature !== 'number' || b.temperature < 0 || b.temperature > 2)) {
+    errors.push({ field: 'temperature', message: 'temperature must be a number between 0 and 2' });
+  }
+  if (b.maxTokens !== undefined && (typeof b.maxTokens !== 'number' || b.maxTokens <= 0)) {
+    errors.push({ field: 'maxTokens', message: 'maxTokens must be a positive number' });
+  }
+  if (b.topP !== undefined && (typeof b.topP !== 'number' || b.topP < 0 || b.topP > 1)) {
+    errors.push({ field: 'topP', message: 'topP must be a number between 0 and 1' });
   }
   return errors;
 }
@@ -144,9 +119,13 @@ export function createProviderRoutes(storage: IStorage, logger: ILogger): Router
         id: uuidv4(),
         name: (body.name as string).trim(),
         description: (body.description as string | undefined) ?? '',
-        provider: body.provider as ProviderConfig,
-        thinking: body.thinking as Provider['thinking'],
-        effort: body.effort as Provider['effort'],
+        providerName: (body.providerName as string).trim(),
+        model: (body.model as string).trim(),
+        apiKey: body.apiKey as string,
+        baseUrl: typeof body.baseUrl === 'string' ? body.baseUrl : undefined,
+        temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
+        maxTokens: typeof body.maxTokens === 'number' ? body.maxTokens : undefined,
+        topP: typeof body.topP === 'number' ? body.topP : undefined,
         timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : 300,
         createdAt: now,
         updatedAt: now,
@@ -179,9 +158,13 @@ export function createProviderRoutes(storage: IStorage, logger: ILogger): Router
         createdAt: existing.createdAt,
         name: (body.name as string).trim(),
         description: (body.description as string | undefined) ?? '',
-        provider: body.provider as ProviderConfig,
-        thinking: body.thinking as Provider['thinking'],
-        effort: body.effort as Provider['effort'],
+        providerName: (body.providerName as string).trim(),
+        model: (body.model as string).trim(),
+        apiKey: body.apiKey as string,
+        baseUrl: typeof body.baseUrl === 'string' ? body.baseUrl : undefined,
+        temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
+        maxTokens: typeof body.maxTokens === 'number' ? body.maxTokens : undefined,
+        topP: typeof body.topP === 'number' ? body.topP : undefined,
         timeoutSeconds: typeof body.timeoutSeconds === 'number' ? body.timeoutSeconds : 300,
         updatedAt: new Date().toISOString(),
       };

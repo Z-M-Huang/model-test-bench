@@ -3,23 +3,6 @@
 // Do NOT import from server (different build target).
 // ---------------------------------------------------------------------------
 
-// -- Provider ----------------------------------------------------------------
-
-export interface ApiProviderConfig {
-  readonly kind: 'api';
-  readonly baseUrl: string;
-  readonly apiKey: string;
-  readonly model: string;
-}
-
-export interface OAuthProviderConfig {
-  readonly kind: 'oauth';
-  readonly oauthToken: string;
-  readonly model: string;
-}
-
-export type ProviderConfig = ApiProviderConfig | OAuthProviderConfig;
-
 // -- Scoring -----------------------------------------------------------------
 
 export interface ScoringDimension {
@@ -34,9 +17,13 @@ export interface Provider {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly provider: ProviderConfig;
-  readonly thinking?: { kind: string; budgetTokens?: number };
-  readonly effort?: 'none' | 'low' | 'medium' | 'high';
+  readonly providerName: string;
+  readonly model: string;
+  readonly apiKey: string;
+  readonly baseUrl?: string;
+  readonly temperature?: number;
+  readonly maxTokens?: number;
+  readonly topP?: number;
   readonly timeoutSeconds: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -54,37 +41,13 @@ export type ScenarioCategory =
   | 'scope-management'
   | 'custom';
 
-export interface WorkspaceFile {
-  readonly path: string;
-  readonly content: string;
-}
-
 export interface Scenario {
   readonly id: string;
   readonly name: string;
   readonly category: ScenarioCategory;
-  // Agent configuration
-  readonly claudeMdFiles: readonly { role: 'project' | 'user'; content: string }[];
-  readonly rules: readonly { name: string; content: string }[];
-  readonly skills: readonly { name: string; content: string }[];
-  readonly subagents: readonly {
-    name: string;
-    description: string;
-    prompt: string;
-    disallowedTools?: readonly string[];
-    mcpServers?: readonly string[];
-    skills?: readonly string[];
-    maxTurns?: number;
-  }[];
-  readonly mcpServers: readonly { name: string; config: Record<string, unknown> }[];
-  readonly permissionMode: string;
-  readonly maxTurns?: number;
-  readonly allowedTools?: readonly string[];
-  readonly disallowedTools?: readonly string[];
-  // Test content
   readonly prompt: string;
-  readonly workspaceFiles: readonly WorkspaceFile[];
-  // Grading
+  readonly systemPrompt: string;
+  readonly enabledTools: readonly string[];
   readonly expectedAnswer: string;
   readonly criticalRequirements: readonly string[];
   readonly gradingGuidelines: string;
@@ -128,7 +91,10 @@ export interface Run {
 export type EvaluationStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface EvaluatorConfig {
-  readonly provider: ProviderConfig;
+  readonly providerName: string;
+  readonly model: string;
+  readonly apiKey: string;
+  readonly baseUrl?: string;
   readonly role: string;
 }
 
@@ -174,8 +140,6 @@ export interface InstructionCompliance {
 
 export interface SetupComplianceReport {
   readonly instructionCompliance: InstructionCompliance;
-  readonly skillUsage: readonly { skillName: string; invoked: boolean; invocationCount: number }[];
-  readonly subagentUsage: readonly { subagentName: string; invoked: boolean; invocationCount: number }[];
 }
 
 export interface EvaluationSynthesis {

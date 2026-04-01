@@ -9,19 +9,16 @@ import type {
 
 // ─── Factory helpers ─────────────────────────────────────────────────
 
-export const BASE_PROVIDER = {
-  kind: 'api' as const,
-  baseUrl: 'https://api.anthropic.com',
-  apiKey: 'sk-test',
-  model: 'claude-sonnet-4-6',
-};
+const MOCK_KEY = 'mock-value-for-testing';
 
 export function makeProvider(overrides: Partial<Provider> = {}): Provider {
   return {
     id: 'provider-1',
     name: 'Test Provider',
     description: 'A test provider',
-    provider: BASE_PROVIDER,
+    providerName: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    apiKey: MOCK_KEY,
     timeoutSeconds: 300,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -34,14 +31,9 @@ export function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
     id: 'scenario-1',
     name: 'Test Scenario',
     category: 'planning',
-    claudeMdFiles: [],
-    rules: [],
-    skills: [],
-    subagents: [],
-    mcpServers: [],
-    permissionMode: 'default',
     prompt: 'Do something',
-    workspaceFiles: [],
+    systemPrompt: '',
+    enabledTools: [],
     expectedAnswer: 'done',
     criticalRequirements: [],
     gradingGuidelines: '',
@@ -52,7 +44,14 @@ export function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
   };
 }
 
-export function makeRun(overrides: Partial<Run> = {}): Run {
+export function makeRun(
+  providerIdOrOverrides?: string | Partial<Run>,
+  scenarioId?: string,
+): Run {
+  const overrides: Partial<Run> =
+    typeof providerIdOrOverrides === 'string'
+      ? { providerId: providerIdOrOverrides, scenarioId: scenarioId ?? 'scenario-1' }
+      : providerIdOrOverrides ?? {};
   return {
     id: 'run-1',
     providerId: 'provider-1',
@@ -87,8 +86,6 @@ export function makeEvaluation(overrides: Partial<Evaluation> = {}): Evaluation 
         notApplicable: [],
         overallCompliance: 1,
       },
-      skillUsage: [],
-      subagentUsage: [],
     },
     synthesis: {
       dimensionScores: {},

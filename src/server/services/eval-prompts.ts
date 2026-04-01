@@ -77,14 +77,7 @@ export function buildCompliancePrompt(
     .map((b, i) => `${i + 1}. [${b.source}] ${b.text}`)
     .join('\n');
 
-  const skillNames = scenario.skills.map((s) => s.name);
-  const subagentNames = scenario.subagents.map((s) => s.name);
-
   return `You are an expert evaluator checking whether an AI agent followed its configured instructions.
-
-## Agent Configuration
-Skills: ${skillNames.length > 0 ? skillNames.join(', ') : 'none'}
-Subagents: ${subagentNames.length > 0 ? subagentNames.join(', ') : 'none'}
 
 ## Instructions to Check
 ${instructionList || 'No instructions configured.'}
@@ -169,7 +162,7 @@ ${dimensions}
 
 ## Provider
 Name: ${provider.name}
-Model: ${provider.provider.model}
+Model: ${provider.model}
 
 ## All Individual Evaluations
 ${evalSummaries}

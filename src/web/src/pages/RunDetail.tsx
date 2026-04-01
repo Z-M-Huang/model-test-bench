@@ -133,10 +133,9 @@ export function RunDetail(): React.JSX.Element {
       <CollapsiblePanel title={t('runDetail.providerSnapshot')} icon="settings_input_component">
         <div className="space-y-2 text-xs">
           <div><span className="text-on-surface-variant">{t('runDetail.nameLabel')}</span> <span className="text-on-surface font-medium">{providerSnap.name}</span></div>
-          <div><span className="text-on-surface-variant">{t('runDetail.modelLabel')}</span> <span className="text-on-surface font-mono">{providerSnap.provider.model}</span></div>
-          <div><span className="text-on-surface-variant">{t('runDetail.providerLabel')}</span> <span className="text-on-surface">{providerSnap.provider.kind}</span></div>
+          <div><span className="text-on-surface-variant">{t('runDetail.providerLabel')}</span> <span className="text-on-surface capitalize">{providerSnap.providerName}</span></div>
+          <div><span className="text-on-surface-variant">{t('runDetail.modelLabel')}</span> <span className="text-on-surface font-mono">{providerSnap.model}</span></div>
           <div><span className="text-on-surface-variant">{t('runDetail.timeoutLabel')}</span> <span className="text-on-surface font-mono">{providerSnap.timeoutSeconds}s</span></div>
-          {providerSnap.effort && <div><span className="text-on-surface-variant">{t('runDetail.effortLabel')}</span> <span className="text-on-surface capitalize">{providerSnap.effort}</span></div>}
         </div>
       </CollapsiblePanel>
 
@@ -145,10 +144,24 @@ export function RunDetail(): React.JSX.Element {
         <div className="space-y-2 text-xs">
           <div><span className="text-on-surface-variant">{t('runDetail.nameLabel')}</span> <span className="text-on-surface font-medium">{scenario.name}</span></div>
           <div><span className="text-on-surface-variant">{t('runDetail.categoryLabel')}</span> <span className="text-on-surface capitalize">{scenario.category}</span></div>
-          <div><span className="text-on-surface-variant">{t('runDetail.permissionModeLabel')}</span> <span className="text-on-surface">{scenario.permissionMode}</span></div>
-          {scenario.maxTurns && <div><span className="text-on-surface-variant">{t('runDetail.maxTurnsLabel')}</span> <span className="text-on-surface font-mono">{scenario.maxTurns}</span></div>}
-          {(scenario.claudeMdFiles ?? []).length > 0 && <div><span className="text-on-surface-variant">{t('runDetail.claudeMdLabel')}</span> <span className="text-on-surface font-mono">{scenario.claudeMdFiles.length}</span></div>}
-          {(scenario.rules ?? []).length > 0 && <div><span className="text-on-surface-variant">{t('runDetail.rulesLabel')}</span> <span className="text-on-surface font-mono">{scenario.rules.length}</span></div>}
+          {scenario.systemPrompt && (
+            <div>
+              <span className="text-on-surface-variant">{t('runDetail.systemPromptLabel')}</span>
+              <div className="mt-1 text-on-surface font-mono whitespace-pre-wrap bg-surface-container p-2 rounded text-[0.7rem] line-clamp-4">
+                {scenario.systemPrompt}
+              </div>
+            </div>
+          )}
+          {scenario.enabledTools.length > 0 && (
+            <div>
+              <span className="text-on-surface-variant">{t('runDetail.enabledToolsLabel')}</span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {scenario.enabledTools.map((tool) => (
+                  <span key={tool} className="text-[0.65rem] font-mono px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-outline-variant/10">{tool}</span>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <span className="text-on-surface-variant">{t('runDetail.promptLabel')}</span>
             <div className="mt-1 text-on-surface font-mono whitespace-pre-wrap bg-surface-container p-2 rounded text-[0.7rem]">
@@ -183,7 +196,7 @@ export function RunDetail(): React.JSX.Element {
                 <div className="flex items-center gap-3">
                   <StatusBadge status={ev.status} />
                   <span className="text-xs text-on-surface font-mono">
-                    {ev.evaluators[0]?.provider.model ?? 'unknown'}
+                    {ev.evaluators[0]?.model ?? 'unknown'}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">

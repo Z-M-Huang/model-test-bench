@@ -12,18 +12,18 @@ import type { Provider } from '../types/index.js';
  */
 const SEED_SCENARIOS = [
   'scenario-baseline.example.json',
-  'scenario-with-claude-md.example.json',
+  'scenario-with-system-prompt.example.json',
   'scenario-carwash-baseline.example.json',
-  'scenario-carwash-with-claude-md.example.json',
+  'scenario-carwash-with-system-prompt.example.json',
   'scenario-negative-analysis-baseline.example.json',
-  'scenario-negative-analysis-with-claude-md.example.json',
+  'scenario-negative-analysis-with-system-prompt.example.json',
   'scenario-golden-rules-baseline.example.json',
-  'scenario-golden-rules-with-claude-md.example.json',
+  'scenario-golden-rules-with-system-prompt.example.json',
 ];
 
 const SEED_PROVIDERS = [
-  'provider-oauth.example.json',
   'provider-api.example.json',
+  'provider-openai.example.json',
 ];
 
 function resolveSchemasDir(): string {

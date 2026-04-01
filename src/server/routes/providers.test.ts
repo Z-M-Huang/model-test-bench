@@ -4,7 +4,7 @@ import request from 'supertest';
 import { createProviderRoutes } from './providers.js';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
-import { BASE_PROVIDER, makeProvider, createMockStorage, createMockLogger } from './route-test-helpers.js';
+import { makeProvider, createMockStorage, createMockLogger } from './route-test-helpers.js';
 
 function createApp(storage: IStorage, logger: ILogger): express.Express {
   const app = express();
@@ -13,10 +13,14 @@ function createApp(storage: IStorage, logger: ILogger): express.Express {
   return app;
 }
 
+const MOCK_KEY = 'mock-value-for-testing';
+
 const VALID_BODY = {
   name: 'My Provider',
   description: 'desc',
-  provider: BASE_PROVIDER,
+  providerName: 'anthropic',
+  model: 'claude-sonnet-4-6',
+  apiKey: MOCK_KEY,
   timeoutSeconds: 300,
 };
 
@@ -39,7 +43,7 @@ describe('Provider routes', () => {
       expect(res.body).toEqual([{
         id: 'provider-1',
         name: 'Test Provider',
-        providerType: 'api',
+        providerName: 'anthropic',
         model: 'claude-sonnet-4-6',
         createdAt: '2026-01-01T00:00:00.000Z',
       }]);
@@ -65,25 +69,15 @@ describe('Provider routes', () => {
       vi.mocked(storage.getProvider).mockResolvedValue(makeProvider());
       const res = await request(app).get('/api/providers/provider-1');
       expect(res.status).toBe(200);
-      expect(res.body.provider.apiKey).toBe('****1234');
+      expect(res.body.apiKey).toBe('****ting');
       expect(res.body.name).toBe('Test Provider');
     });
 
-    it('masks oauth token for oauth providers', async () => {
-      const oauthProvider = makeProvider({
-        provider: { kind: 'oauth', oauthToken: 'not-real-abcd', model: 'claude-sonnet-4-6' },
-      });
-      vi.mocked(storage.getProvider).mockResolvedValue(oauthProvider);
-      const res = await request(app).get('/api/providers/provider-1');
-      expect(res.status).toBe(200);
-      expect(res.body.provider.oauthToken).toBe('****abcd');
-    });
-
     it('masks short secrets correctly', async () => {
-      const provider = makeProvider({ provider: { ...BASE_PROVIDER, apiKey: 'ab' } });
+      const provider = makeProvider({ apiKey: 'ab' });
       vi.mocked(storage.getProvider).mockResolvedValue(provider);
       const res = await request(app).get('/api/providers/provider-1');
-      expect(res.body.provider.apiKey).toBe('****');
+      expect(res.body.apiKey).toBe('****');
     });
 
     it('returns 404 for non-existent provider', async () => {
@@ -106,7 +100,7 @@ describe('Provider routes', () => {
       const res = await request(app).post('/api/providers').send(VALID_BODY);
       expect(res.status).toBe(201);
       expect(res.body.name).toBe('My Provider');
-      expect(res.body.provider.apiKey).toBe('****1234');
+      expect(res.body.apiKey).toBe('****ting');
       expect(res.body.id).toBeDefined();
       expect(storage.saveProvider).toHaveBeenCalledTimes(1);
     });
@@ -119,41 +113,30 @@ describe('Provider routes', () => {
       );
     });
 
-    it('rejects missing provider', async () => {
-      const res = await request(app).post('/api/providers').send({ name: 'Test', timeoutSeconds: 300 });
+    it('rejects missing providerName', async () => {
+      const { providerName: _, ...body } = VALID_BODY;
+      const res = await request(app).post('/api/providers').send(body);
       expect(res.status).toBe(400);
       expect(res.body.errors).toEqual(
-        expect.arrayContaining([expect.objectContaining({ field: 'provider' })]),
+        expect.arrayContaining([expect.objectContaining({ field: 'providerName' })]),
       );
     });
 
-    it('rejects invalid provider kind', async () => {
-      const res = await request(app).post('/api/providers').send({
-        ...VALID_BODY, provider: { kind: 'invalid', model: 'x' },
-      });
+    it('rejects missing model', async () => {
+      const { model: _, ...body } = VALID_BODY;
+      const res = await request(app).post('/api/providers').send(body);
       expect(res.status).toBe(400);
       expect(res.body.errors).toEqual(
-        expect.arrayContaining([expect.objectContaining({ field: 'provider.kind' })]),
+        expect.arrayContaining([expect.objectContaining({ field: 'model' })]),
       );
     });
 
-    it('rejects api provider without apiKey', async () => {
-      const res = await request(app).post('/api/providers').send({
-        ...VALID_BODY, provider: { kind: 'api', baseUrl: 'http://example.com', model: 'x' },
-      });
+    it('rejects missing apiKey', async () => {
+      const { apiKey: _, ...body } = VALID_BODY;
+      const res = await request(app).post('/api/providers').send(body);
       expect(res.status).toBe(400);
       expect(res.body.errors).toEqual(
-        expect.arrayContaining([expect.objectContaining({ field: 'provider.apiKey' })]),
-      );
-    });
-
-    it('rejects oauth provider without token', async () => {
-      const res = await request(app).post('/api/providers').send({
-        ...VALID_BODY, provider: { kind: 'oauth', model: 'x' },
-      });
-      expect(res.status).toBe(400);
-      expect(res.body.errors).toEqual(
-        expect.arrayContaining([expect.objectContaining({ field: 'provider.oauthToken' })]),
+        expect.arrayContaining([expect.objectContaining({ field: 'apiKey' })]),
       );
     });
 
@@ -170,6 +153,14 @@ describe('Provider routes', () => {
       expect(res.status).toBe(400);
       expect(res.body.errors).toEqual(
         expect.arrayContaining([expect.objectContaining({ field: 'timeoutSeconds' })]),
+      );
+    });
+
+    it('rejects invalid temperature', async () => {
+      const res = await request(app).post('/api/providers').send({ ...VALID_BODY, temperature: 3 });
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toEqual(
+        expect.arrayContaining([expect.objectContaining({ field: 'temperature' })]),
       );
     });
 

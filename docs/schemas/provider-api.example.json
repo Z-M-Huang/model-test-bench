@@ -1,16 +1,12 @@
 {
-  "id": "provider-api-minimax",
-  "name": "MiniMax M2.7 (API)",
-  "description": "MiniMax via Anthropic-compatible API endpoint",
-  "provider": {
-    "kind": "api",
-    "baseUrl": "https://api.minimax.io/anthropic",
-    "apiKey": "xxxxx",
-    "model": "MiniMax-M2.7"
-  },
-  "thinking": { "kind": "adaptive" },
-  "effort": "high",
+  "id": "provider-anthropic-sonnet",
+  "name": "Anthropic Sonnet",
+  "description": "Anthropic Claude Sonnet via API",
+  "providerName": "anthropic",
+  "model": "claude-sonnet-4-20250514",
+  "apiKey": "sk-ant-your-key-here",
+  "baseUrl": "https://api.anthropic.com",
   "timeoutSeconds": 300,
-  "createdAt": "2026-03-24T00:00:00.000Z",
-  "updatedAt": "2026-03-24T00:00:00.000Z"
+  "createdAt": "2026-03-31T00:00:00.000Z",
+  "updatedAt": "2026-03-31T00:00:00.000Z"
 }

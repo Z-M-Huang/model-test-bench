@@ -12,7 +12,7 @@ export function isNewer(latest: string, current: string): boolean {
 
 export function checkForUpdate(currentVersion: string): void {
   const req = https.get(
-    'https://registry.npmjs.org/claude-test-bench/latest',
+    'https://registry.npmjs.org/model-test-bench/latest',
     { timeout: 3000, headers: { Accept: 'application/json' } },
     (res) => {
       if (res.statusCode !== 200) return;
@@ -25,7 +25,7 @@ export function checkForUpdate(currentVersion: string): void {
           if (latest && latest !== currentVersion && isNewer(latest, currentVersion)) {
             console.log(
               `\n  Update available: ${currentVersion} → \x1b[32m${latest}\x1b[0m` +
-              `\n  Run \x1b[36mnpm install -g claude-test-bench\x1b[0m to update\n`,
+              `\n  Run \x1b[36mnpm install -g model-test-bench\x1b[0m to update\n`,
             );
           }
         } catch { /* ignore parse errors */ }

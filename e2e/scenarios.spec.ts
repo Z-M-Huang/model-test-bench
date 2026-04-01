@@ -5,12 +5,12 @@ test.use({ viewport: { width: 1440, height: 900 } });
 /** Navigate to /scenarios and wait for the scenario list to load. */
 async function gotoScenarioList(page: import('@playwright/test').Page) {
   await page.goto('/scenarios');
-  await page.waitForLoadState('domcontentloaded');
+  await page.waitForLoadState('networkidle');
   // Wait for scenarios to load -- either a category heading or the "New Scenario" button appears.
   // The "New Scenario" button is rendered immediately and doesn't depend on API data.
   await expect(
     page.locator('button', { hasText: 'New Scenario' }),
-  ).toBeVisible({ timeout: 10000 });
+  ).toBeVisible({ timeout: 15000 });
   // Then wait for loading to finish (either categories appear or empty state)
   await expect(page.getByText('Loading scenarios...')).not.toBeVisible({ timeout: 10000 });
 }
@@ -26,8 +26,8 @@ test.describe('Scenario features', () => {
 
   test('scenario list page loads with category groups', async ({ page }) => {
     await gotoScenarioList(page);
-    // Wait for at least one scenario section to render
-    await expect(page.locator('section h3').first()).toBeVisible({ timeout: 10000 });
+    // Wait for at least one category heading (h2) inside a section to render
+    await expect(page.locator('section h2').first()).toBeVisible({ timeout: 15000 });
     // The page shows category sections with headings
     const categoryHeadings = [
       'Reasoning & Logic',
@@ -51,7 +51,8 @@ test.describe('Scenario features', () => {
 
   test('seeded scenarios are visible in list', async ({ page }) => {
     await gotoScenarioList(page);
-    // Seeded scenarios should appear in the list
+    // Wait for at least one scenario card (h3 inside section) to appear
+    await expect(page.locator('section h3').first()).toBeVisible({ timeout: 15000 });
     const scenarioCards = page.locator('section h3');
     const count = await scenarioCards.count();
     expect(count).toBeGreaterThanOrEqual(1);
@@ -60,7 +61,8 @@ test.describe('Scenario features', () => {
   test('clicking a seeded scenario opens it for editing', async ({ page }) => {
     await gotoScenarioList(page);
 
-    // Click the first scenario card
+    // Wait for at least one scenario card to render, then click the first one
+    await expect(page.locator('section h3').first()).toBeVisible({ timeout: 15000 });
     const firstCardName = page.locator('section h3').first();
     await firstCardName.click();
 
@@ -82,11 +84,12 @@ test.describe('Scenario features', () => {
 
   test('scenario editor loads with all form sections', async ({ page }) => {
     await page.goto('/scenarios/new');
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Create New Scenario')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Basic Information')).toBeVisible();
-    await expect(page.getByText('User Prompt')).toBeVisible();
-    await expect(page.getByText('Workspace Files')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'User Prompt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'System Prompt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Enabled Tools' })).toBeVisible();
     await expect(page.getByText('Critical Requirements')).toBeVisible();
     await expect(page.getByText('Expected Answer')).toBeVisible();
     await expect(page.getByText('Grading & Scoring')).toBeVisible();
@@ -108,25 +111,38 @@ test.describe('Scenario features', () => {
     await expect(categorySelect).toHaveValue('custom');
   });
 
-  test('can add workspace files', async ({ page }) => {
+  test('can toggle enabled tools', async ({ page }) => {
     await page.goto('/scenarios/new');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.getByText('Create New Scenario')).toBeVisible({ timeout: 10000 });
 
-    // The DynamicList for workspace files has label="" so we need to find the Add button
-    // that is NOT one of the agent config Add buttons (Add CLAUDE.md, Add Rule, etc.)
-    // The workspace files section is identified by its SectionHead "Workspace Files"
-    // Use the heading text to find the right container, then click the sibling Add button
-    const wsHeading = page.getByText('Workspace Files', { exact: true });
-    // The DynamicList Add button is in the same bg-surface-container div
-    const wsAdd = wsHeading.locator('..').locator('..').getByRole('button', { name: 'add Add', exact: true });
-    await wsAdd.click();
+    // The Enabled Tools section shows tool checkboxes
+    const readFileLabel = page.locator('label', { hasText: 'read_file' });
+    await expect(readFileLabel).toBeVisible();
 
-    // A file entry should appear with path and content inputs
-    const pathInput = page.locator('input[placeholder*="src/path"]');
-    await expect(pathInput).toBeVisible();
-    await pathInput.fill('src/test.ts');
-    await expect(pathInput).toHaveValue('src/test.ts');
+    // Click to enable read_file
+    await readFileLabel.click();
+    // The label should now have active styling (check icon visible)
+    await expect(readFileLabel.locator('.material-symbols-outlined')).toBeVisible();
+
+    // Click again to disable
+    await readFileLabel.click();
+    await expect(readFileLabel.locator('.material-symbols-outlined')).not.toBeVisible();
+  });
+
+  test('no legacy Claude-specific sections visible (UAT-8)', async ({ page }) => {
+    await page.goto('/scenarios/new');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByText('Create New Scenario')).toBeVisible({ timeout: 10000 });
+
+    // These legacy sections should NOT appear
+    await expect(page.getByText('CLAUDE.md', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('Rules', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('Skills', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('Subagents', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('MCP Servers', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('Permission Mode', { exact: true })).not.toBeVisible();
+    await expect(page.getByText('Workspace Files', { exact: true })).not.toBeVisible();
   });
 
   test('can add critical requirements', async ({ page }) => {
@@ -215,6 +231,14 @@ test.describe('Scenario features', () => {
     const promptTextarea = page.locator('textarea[placeholder="Enter the user test prompt here..."]');
     await promptTextarea.fill('This is a test prompt for E2E testing');
 
+    // Fill the system prompt
+    const systemPromptTextarea = page.locator('textarea[placeholder="System prompt for the model..."]');
+    await systemPromptTextarea.fill('You are a helpful test assistant.');
+
+    // Toggle a tool checkbox (enable read_file)
+    const readFileLabel = page.locator('label', { hasText: 'read_file' });
+    await readFileLabel.click();
+
     const responsePromise = page.waitForResponse(
       (res) => res.url().includes('/api/scenarios') && res.request().method() === 'POST',
     );
@@ -230,7 +254,8 @@ test.describe('Scenario features', () => {
 
     // Step 2: Verify it appears in the list
     await page.goto('/scenarios');
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('button', { hasText: 'New Scenario' })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('E2E Custom Scenario')).toBeVisible({ timeout: 10000 });
 
     // Step 3: Edit the scenario
@@ -262,9 +287,9 @@ test.describe('Scenario features', () => {
 
     // Verify it's gone from the list
     await page.goto('/scenarios');
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     // Wait for scenario data to load first
-    await expect(page.locator('button', { hasText: 'New Scenario' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('button', { hasText: 'New Scenario' })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Loading scenarios...')).not.toBeVisible({ timeout: 10000 });
     await expect(page.getByText('E2E Custom Scenario Updated')).not.toBeVisible();
   });

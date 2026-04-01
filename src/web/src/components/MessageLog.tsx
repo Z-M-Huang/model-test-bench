@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { SDKMessageRecord } from '../types.js';
 import { ToolCallBlock } from './ToolCallBlock.js';
 import { ThinkingBlock } from './ThinkingBlock.js';
+import { coalesceMessages } from './message-coalescer.js';
 
 interface Props {
   messages: readonly SDKMessageRecord[];
@@ -96,6 +97,47 @@ function extractText(content: unknown): string {
 function MessageEntry({ record }: { record: SDKMessageRecord }): React.JSX.Element {
   const { t } = useTranslation();
   const { type, role, content, raw } = unwrap(record.message);
+
+  // ── Streaming text delta (AI SDK streamText) ──
+  if (type === 'text-delta') {
+    const text = raw.text as string | undefined;
+    if (!text) return null;
+    return (
+      <div className="flex gap-3">
+        <div className="w-6 h-6 rounded-full bg-primary-container/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: '0.8rem' }}>smart_toy</span>
+        </div>
+        <div className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{text}</div>
+      </div>
+    );
+  }
+
+  // ── Reasoning/thinking delta ──
+  if (type === 'reasoning-delta') {
+    const text = raw.text as string | undefined;
+    if (!text) return null;
+    return <ThinkingBlock content={text} />;
+  }
+
+  // ── Streaming tool call ──
+  if (type === 'tool-call') {
+    return (
+      <ToolCallBlock
+        name={(raw.toolName as string) ?? 'unknown'}
+        input={raw.args}
+      />
+    );
+  }
+
+  // ── Streaming tool result ──
+  if (type === 'tool-result') {
+    return (
+      <ToolCallBlock
+        name={(raw.toolName as string) ?? 'result'}
+        output={typeof raw.result === 'string' ? raw.result : JSON.stringify(raw.result)}
+      />
+    );
+  }
 
   // ── System messages: show compact or hide ──
   if (type === 'system') {
@@ -241,9 +283,11 @@ export function MessageLog({ messages, loading }: Props): React.JSX.Element {
     );
   }
 
+  const coalesced = coalesceMessages(messages);
+
   return (
     <div className="space-y-4 p-4">
-      {messages.map((record, idx) => (
+      {coalesced.map((record, idx) => (
         <MessageEntry key={idx} record={record} />
       ))}
       <div ref={bottomRef} />

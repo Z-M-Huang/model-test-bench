@@ -24,7 +24,7 @@ const mkEval = (o: Partial<Evaluation> = {}): Evaluation => ({
   rounds: [{ roundNumber: 1, evaluations: [], consensusReached: true, timestamp: TS }],
   answerComparison: { matches: true, explanation: 'Good', similarity: 0.9 },
   criticalResults: [],
-  setupCompliance: { instructionCompliance: EMPTY_COMPLIANCE, skillUsage: [], subagentUsage: [] },
+  setupCompliance: { instructionCompliance: EMPTY_COMPLIANCE },
   synthesis: { dimensionScores: {}, weightedTotal: 8, confidence: 0.9, dissenting: [] },
   ledger: [], totalCostUsd: 0.05, createdAt: TS, updatedAt: TS, ...o,
 });

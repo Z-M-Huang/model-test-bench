@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method -- vi.fn() mocks don't have this-binding issues */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JsonFileStorage } from './storage.js';
-import { BASE_PROVIDER, createMockFs, makeProvider, makeScenario, makeRun, makeEvaluation } from './storage-test-helpers.js';
+import { createMockFs, makeProvider, makeScenario, makeRun, makeEvaluation } from './storage-test-helpers.js';
 
 describe('JsonFileStorage', () => {
   let mockFsData: ReturnType<typeof createMockFs>;
@@ -79,24 +79,17 @@ describe('JsonFileStorage', () => {
       expect(all).toHaveLength(2);
     });
 
-    it('filters providers by provider kind', async () => {
-      await storage.saveProvider(makeProvider({ id: 's1', provider: { ...BASE_PROVIDER, kind: 'api' } }));
-      await storage.saveProvider(makeProvider({
-        id: 's2',
-        provider: { kind: 'oauth', oauthToken: 'tok', model: 'claude-sonnet-4-6' },
-      }));
-      const filtered = await storage.listProviders({ provider: 'api' });
+    it('filters providers by providerName', async () => {
+      await storage.saveProvider(makeProvider({ id: 's1', providerName: 'anthropic' }));
+      await storage.saveProvider(makeProvider({ id: 's2', providerName: 'openai' }));
+      const filtered = await storage.listProviders({ provider: 'anthropic' });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('s1');
     });
 
     it('filters providers by model', async () => {
-      await storage.saveProvider(makeProvider({
-        id: 's1', provider: { ...BASE_PROVIDER, model: 'claude-sonnet-4-6' },
-      }));
-      await storage.saveProvider(makeProvider({
-        id: 's2', provider: { ...BASE_PROVIDER, model: 'claude-opus-4' },
-      }));
+      await storage.saveProvider(makeProvider({ id: 's1', model: 'claude-sonnet-4-6' }));
+      await storage.saveProvider(makeProvider({ id: 's2', model: 'claude-opus-4' }));
       const filtered = await storage.listProviders({ model: 'claude-opus-4' });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('s2');

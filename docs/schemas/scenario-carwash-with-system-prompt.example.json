@@ -1,0 +1,24 @@
+{
+  "id": "scenario-carwash-with-system-prompt",
+  "name": "Car Wash Test — Goal-Oriented Reasoning (With System Prompt)",
+  "category": "instruction-following",
+  "prompt": "Think through the following question carefully and provide your recommendation with full reasoning.\n\nI want to wash my car. The car wash is 50 meters away. Should I walk or drive?",
+  "systemPrompt": "# Reasoning Guidelines\n\n## Goal-First Thinking\n\nBefore answering ANY question or making ANY recommendation:\n\n1. IDENTIFY THE ACTUAL GOAL — What is the user ultimately trying to accomplish? Not what they're asking about, but what real-world outcome they need.\n2. IDENTIFY PHYSICAL CONSTRAINTS — What objects, people, or resources must be in specific locations or states for the goal to be achieved?\n3. WORK BACKWARD from the goal — What must be true for the goal to succeed? Then recommend the action that satisfies those requirements.\n4. NEVER optimize for a secondary metric (convenience, cost, effort, distance) if it prevents achieving the primary goal.\n\n## Anti-Patterns to Avoid\n\n- Do NOT treat questions as abstract optimization problems. Ground them in physical reality.\n- Do NOT default to the 'common sense' answer about distance, effort, or efficiency without first checking whether it actually achieves the goal.\n- If the obvious-sounding answer would fail to achieve the stated goal, it is WRONG regardless of how reasonable it sounds.\n- Short distances, low costs, and minimal effort are irrelevant if the goal is not met.",
+  "enabledTools": [],
+  "expectedAnswer": "You should DRIVE.\n\nGoal analysis: The user's goal is to wash their car. This requires the car to be physically present at the car wash facility. Walking to the car wash would leave the car at home — the goal would not be achieved.\n\nPhysical constraint: The car is the object being serviced. It must travel to the car wash. The only way to move a car is to drive it (or tow it).\n\nThe 50-meter distance is irrelevant — whether the car wash is 50 meters or 50 kilometers away, the car must make the trip. Optimizing for walking distance fails the primary goal entirely.",
+  "criticalRequirements": [
+    "Must recommend driving (NOT walking)",
+    "Must explain that the car needs to be physically present at the car wash to be washed",
+    "Must NOT prioritize distance/effort/fuel efficiency over the actual goal of washing the car",
+    "Response must show evidence of goal-first reasoning as instructed by system prompt"
+  ],
+  "gradingGuidelines": "Grade this response on the 'Car Wash Test' AND adherence to the goal-first reasoning framework from the system prompt.\n\nKey evaluation criteria:\n1. CORRECTNESS (most important): Did the model recommend DRIVING? If it recommends walking, score Correctness as 0.\n\n2. GOAL IDENTIFICATION: Did the model explicitly identify the goal ('wash my car' -> car must be at car wash) BEFORE discussing distance or logistics?\n\n3. REASONING QUALITY: Did the model explain WHY driving is necessary? Did it work backward from the goal as instructed?\n\nADDITIONAL EVALUATION — System Prompt Instruction Effectiveness:\n\nFor EACH instruction, evaluate whether it visibly influenced behavior:\n\n1. 'IDENTIFY THE ACTUAL GOAL' — Did the response explicitly state the goal before recommending an action?\n2. 'IDENTIFY PHYSICAL CONSTRAINTS' — Did the response explicitly note the car must be physically present?\n3. 'WORK BACKWARD from the goal' — Did the response reason from goal -> requirements -> recommendation?\n4. 'NEVER optimize for a secondary metric if it prevents achieving the primary goal' — Did the response deprioritize distance/effort?\n5. 'Do NOT default to the common sense answer about distance' — Did the response acknowledge that walking sounds reasonable but fails the goal?\n\nFor each instruction, report: EFFECTIVE, PARTIALLY EFFECTIVE, NOT EFFECTIVE, or NOT APPLICABLE.",
+  "scoringDimensions": [
+    { "name": "Correctness", "weight": 0.35, "description": "Did the model recommend driving? Walking is wrong." },
+    { "name": "Goal Identification", "weight": 0.25, "description": "Did the model explicitly identify the goal and physical constraints before recommending?" },
+    { "name": "Instruction Following", "weight": 0.25, "description": "Did the system prompt goal-first framework visibly shape the response structure and reasoning?" },
+    { "name": "Reasoning Quality", "weight": 0.15, "description": "Clear reasoning, distance recognized as irrelevant, no over-analysis" }
+  ],
+  "createdAt": "2026-03-31T00:00:00.000Z",
+  "updatedAt": "2026-03-31T00:00:00.000Z"
+}

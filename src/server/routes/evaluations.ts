@@ -90,7 +90,13 @@ export function createEvaluationRoutes(
           res.status(404).json({ error: `Provider not found: ${entry.providerId}` });
           return;
         }
-        evaluators.push({ provider: providerRecord.provider, role: entry.role });
+        evaluators.push({
+          providerName: providerRecord.providerName,
+          model: providerRecord.model,
+          apiKey: providerRecord.apiKey,
+          baseUrl: providerRecord.baseUrl,
+          role: entry.role,
+        });
       }
 
       // Validate maxRounds
@@ -115,8 +121,6 @@ export function createEvaluationRoutes(
         criticalResults: [],
         setupCompliance: {
           instructionCompliance: { followed: [], violated: [], notApplicable: [], overallCompliance: 0 },
-          skillUsage: [],
-          subagentUsage: [],
         },
         synthesis: { dimensionScores: {}, weightedTotal: 0, confidence: 0, dissenting: [] },
         ledger: [],

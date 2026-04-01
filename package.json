@@ -1,12 +1,12 @@
 {
-  "name": "claude-test-bench",
+  "name": "model-test-bench",
   "version": "1.0.1",
   "type": "module",
-  "description": "Benchmark AI agent behavior — A/B test CLAUDE.md instructions, compare models, and grade runs with LLM-based evaluation",
+  "description": "Benchmark LLM behavior — compare models, test system prompts, and grade runs with LLM-based evaluation",
   "main": "dist/server/index.js",
   "bin": {
-    "ctb": "./dist/bin/ctb.js",
-    "claude-test-bench": "./dist/bin/ctb.js"
+    "mtb": "./dist/bin/mtb.js",
+    "model-test-bench": "./dist/bin/mtb.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -33,31 +33,35 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Z-M-Huang/claude-test-bench.git"
+    "url": "git+https://github.com/Z-M-Huang/model-test-bench.git"
   },
   "keywords": [
-    "claude",
-    "claude-code",
-    "claude-md",
+    "model",
+    "ai-model",
     "benchmark",
     "testing",
     "ai-agent",
     "llm",
     "evaluation",
-    "agent-sdk",
-    "instruction-compliance"
+    "ai-sdk",
+    "instruction-compliance",
+    "model-testing"
   ],
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Z-M-Huang/claude-test-bench/issues"
+    "url": "https://github.com/Z-M-Huang/model-test-bench/issues"
   },
-  "homepage": "https://github.com/Z-M-Huang/claude-test-bench#readme",
+  "homepage": "https://github.com/Z-M-Huang/model-test-bench#readme",
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.81",
+    "@ai-sdk/anthropic": "^3.0.64",
+    "@ai-sdk/google": "^3.0.54",
+    "@ai-sdk/openai": "^3.0.49",
+    "ai": "^6.0.142",
     "express": "^5.1.0",
     "open": "^10.1.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

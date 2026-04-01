@@ -3,22 +3,16 @@ import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
 import type { Provider, Scenario } from '../types/index.js';
 
-// NOTE: These are not real keys — they are test-only fixtures.
-export const TEST_KEY = 'not-a-real-key-1234';
-
-export const BASE_PROVIDER = {
-  kind: 'api' as const,
-  baseUrl: 'https://api.example.com',
-  apiKey: TEST_KEY,
-  model: 'claude-sonnet-4-6',
-};
+const MOCK_KEY = 'mock-value-for-testing';
 
 export function makeProvider(overrides: Partial<Provider> = {}): Provider {
   return {
     id: 'provider-1',
     name: 'Test Provider',
     description: 'A test provider',
-    provider: BASE_PROVIDER,
+    providerName: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    apiKey: MOCK_KEY,
     timeoutSeconds: 300,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -31,14 +25,9 @@ export function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
     id: 'scenario-1',
     name: 'Test Scenario',
     category: 'planning',
-    claudeMdFiles: [],
-    rules: [],
-    skills: [],
-    subagents: [],
-    mcpServers: [],
-    permissionMode: 'default',
     prompt: 'Write a function',
-    workspaceFiles: [],
+    systemPrompt: '',
+    enabledTools: [],
     expectedAnswer: 'done',
     criticalRequirements: [],
     gradingGuidelines: '',

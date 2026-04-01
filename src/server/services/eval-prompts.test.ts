@@ -105,20 +105,10 @@ describe('buildCompliancePrompt', () => {
     expect(prompt).toContain('No instructions configured');
   });
 
-  it('lists skills and subagents', () => {
-    const scenario = makeScenario({
-      skills: [{ name: 'deploy', content: 'deploy stuff' }],
-      subagents: [{ name: 'helper', description: 'helps', prompt: 'help' }],
-    });
-    const prompt = buildCompliancePrompt('transcript', scenario, []);
-    expect(prompt).toContain('Skills: deploy');
-    expect(prompt).toContain('Subagents: helper');
-  });
-
-  it('shows "none" for empty skills/subagents', () => {
+  it('does not include skills or subagents sections', () => {
     const prompt = buildCompliancePrompt('transcript', makeScenario(), []);
-    expect(prompt).toContain('Skills: none');
-    expect(prompt).toContain('Subagents: none');
+    expect(prompt).not.toContain('Skills:');
+    expect(prompt).not.toContain('Subagents:');
   });
 });
 

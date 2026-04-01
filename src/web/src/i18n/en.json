@@ -17,7 +17,7 @@
     "status": "Status"
   },
   "nav": {
-    "appName": "Claude Test Bench",
+    "appName": "Model Test Bench",
     "testBench": "Test Bench",
     "envLabel": "Local Environment",
     "dashboard": "Dashboard",
@@ -41,10 +41,10 @@
     "totalScenarios": "Total Scenarios",
     "totalRuns": "Total Runs",
     "newProvider": "New Provider",
-    "newProviderDesc": "Configure environment variables, model parameters, and adapter weights for a new test environment.",
+    "newProviderDesc": "Configure model provider, API credentials, and generation parameters for a new test environment.",
     "initializeProvider": "INITIALIZE PROVIDER",
     "startRun": "Start Run",
-    "startRunDesc": "Execute a batch process using an existing provider and scenario. Real-time logging will be enabled.",
+    "startRunDesc": "Execute a test scenario using an existing provider. Real-time logging will be enabled.",
     "launchEngine": "LAUNCH ENGINE",
     "recentRuns": "Recent Runs",
     "viewAllHistory": "View All History",
@@ -71,18 +71,25 @@
     "subtitle": "Configure and manage your LLM provider integration parameters.",
     "newProvider": "New Provider",
     "noProviders": "No providers yet. Create one to get started.",
-    "anthropicApi": "Anthropic API",
-    "claudeCodeAuth": "Claude Code Auth",
     "confirmDelete": "Delete this provider?"
   },
   "providerEditor": {
     "newTitle": "New Provider",
     "editTitle": "Edit Provider",
-    "newSubtitle": "Configure a new test environment.",
+    "newSubtitle": "Configure a new model provider.",
     "editSubtitle": "Editing provider {{id}}",
     "loadingProvider": "Loading provider...",
     "basicInfo": "Basic Information",
     "providerConfig": "Provider Configuration",
+    "providerName": "Provider",
+    "model": "Model",
+    "apiKey": "API Key",
+    "baseUrl": "Base URL",
+    "modelParameters": "Model Parameters",
+    "temperature": "Temperature",
+    "maxTokens": "Max Tokens",
+    "topP": "Top P",
+    "timeoutSeconds": "Timeout (seconds)",
     "createProvider": "Create Provider",
     "saveChanges": "Save Changes"
   },
@@ -90,14 +97,17 @@
     "baseUrl": "Base URL",
     "apiKey": "API Key",
     "model": "Model",
-    "oauthToken": "OAuth Token"
+    "providerName": "Provider Name",
+    "temperature": "Temperature",
+    "maxTokens": "Max Tokens",
+    "topP": "Top P"
   },
   "advanced": {
     "title": "Advanced Settings",
     "timeout": "Timeout (seconds)",
-    "thinking": "Thinking",
-    "budgetTokens": "Budget Tokens",
-    "effort": "Effort"
+    "temperature": "Temperature",
+    "maxTokens": "Max Tokens",
+    "topP": "Top P"
   },
   "scenarios": {
     "newScenario": "New Scenario",
@@ -108,17 +118,13 @@
     "noPrompt": "No prompt defined.",
     "scenarioCount_one": "{{count}} Scenario",
     "scenarioCount_other": "{{count}} Scenarios",
-    "claudeMdCount": "{{count}} CLAUDE.md",
-    "ruleCount_one": "{{count}} rule",
-    "ruleCount_other": "{{count}} rules",
-    "subagentCount_one": "{{count}} subagent",
-    "subagentCount_other": "{{count}} subagents",
-    "mcpCount": "{{count}} MCP"
+    "toolCount_one": "{{count}} tool",
+    "toolCount_other": "{{count}} tools"
   },
   "scenarioEditor": {
     "createTitle": "Create New Scenario",
     "editTitle": "Edit Scenario",
-    "subtitle": "Define agent configuration, evaluation parameters and ground truth for model testing.",
+    "subtitle": "Define task, system prompt, tool configuration, and grading rubric for model testing.",
     "saveScenario": "Save Scenario",
     "saving": "Saving...",
     "loadingScenario": "Loading scenario...",
@@ -131,32 +137,22 @@
     "gradingGuidelines": "Grading Guidelines",
     "scoringDimensions": "Scoring Dimensions",
     "userPrompt": "User Prompt",
-    "workspaceFiles": "Workspace Files",
+    "systemPrompt": "System Prompt",
+    "enabledTools": "Enabled Tools",
+    "enabledToolsHelp": "Select which tools are available to the model during execution.",
     "weight": "Weight"
   },
-  "agentConfig": {
-    "claudeMdFiles": "CLAUDE.md Files",
-    "claudeMdHelp": "Up to 2 files: one project-level and one user-level. Choose inline content or a file path.",
-    "fileCount": "{{count}} file(s)",
-    "rules": "Rules",
-    "ruleCount": "{{count}} rule(s)",
-    "skills": "Skills",
-    "skillCount": "{{count}} skill(s)",
-    "subagents": "Subagents",
-    "subagentCount": "{{count}} subagent(s)",
-    "mcpServers": "MCP Servers",
-    "serverCount": "{{count}} server(s)",
-    "permissionsLimits": "Permissions & Limits",
-    "permissionMode": "Permission Mode",
-    "maxTurns": "Max Turns",
-    "deniedTools": "Denied Tools",
-    "deniedToolsHelp": "All tools are allowed by default. Click to deny specific tools.",
-    "disallowedTools": "Disallowed Tools (SDK Blocklist)",
-    "disallowedToolsHelp": "Comma-separated tool names to completely remove from the model context. Unlike denied tools above, these won't exist at all."
+  "toolConfig": {
+    "enabledTools": "Enabled Tools",
+    "enabledToolsHelp": "Select which tools are available to the model during execution.",
+    "toolCount": "{{count}} tool(s)",
+    "readFile": "Read File",
+    "searchFile": "Search File",
+    "webSearch": "Web Search"
   },
   "run": {
     "title": "New Run",
-    "subtitle": "Execute a test scenario against a provider configuration.",
+    "subtitle": "Execute a test scenario against a model provider.",
     "apiProvider": "API Provider",
     "scenario": "Scenario",
     "noProviders": "No providers available",
@@ -193,13 +189,10 @@
     "modelLabel": "Model:",
     "providerLabel": "Provider:",
     "timeoutLabel": "Timeout:",
-    "effortLabel": "Effort:",
     "categoryLabel": "Category:",
-    "permissionModeLabel": "Permission Mode:",
-    "maxTurnsLabel": "Max Turns:",
-    "claudeMdLabel": "CLAUDE.md files:",
-    "rulesLabel": "Rules:",
     "promptLabel": "Prompt:",
+    "systemPromptLabel": "System Prompt:",
+    "enabledToolsLabel": "Enabled Tools:",
     "expectedAnswerLabel": "Expected Answer:"
   },
   "evalConfig": {
@@ -227,7 +220,6 @@
     "criticalRequirements": "Critical Requirements",
     "answerComparison": "Answer Comparison",
     "instructionCompliance": "Instruction Compliance",
-    "toolAgentUsage": "Tool & Agent Usage",
     "analysis": "Analysis",
     "evaluationRounds": "Evaluation Rounds ({{count}})",
     "round": "Round {{number}}",
@@ -266,13 +258,8 @@
     "noComplianceData": "No compliance data available.",
     "overallCompliance": "Overall compliance:",
     "instruction": "Instruction",
-    "noUsageData": "No skill or subagent usage data available.",
-    "skillUsage": "Skill Usage",
-    "subagentUsage": "Subagent Usage",
-    "skill": "Skill",
-    "subagent": "Subagent",
-    "invoked": "Invoked",
-    "count": "Count",
+    "toolAgentUsage": "Compliance Overview",
+    "noUsageData": "No compliance data available.",
     "strengths": "Strengths",
     "weaknesses": "Weaknesses",
     "recommendations": "Recommendations",
@@ -299,39 +286,10 @@
     "scope-management": "Scope Management",
     "custom": "Custom"
   },
-  "permissionMode": {
-    "default": "Default",
-    "acceptEdits": "Accept Edits",
-    "plan": "Plan",
-    "bypassPermissions": "Bypass Permissions"
-  },
   "messageLog": {
     "sessionInitialized": "Session initialized",
     "apiRetry": "API retry #{{attempt}}",
     "apiRetryWithError": "API retry #{{attempt}}: {{error}}"
-  },
-  "claudeMd": {
-    "project": "Project",
-    "user": "User",
-    "inlineContent": "Inline Content",
-    "fileReference": "File Reference"
-  },
-  "subagentEditor": {
-    "promptSource": "Prompt Source",
-    "inlinePrompt": "Inline Prompt",
-    "fileReference": "File Reference",
-    "addSubagent": "Add Subagent",
-    "advanced": "Advanced"
-  },
-  "mcpServerEditor": {
-    "serverName": "Server Name",
-    "type": "Type",
-    "command": "Command",
-    "args": "Args (comma-separated)",
-    "envVars": "Environment Variables (KEY=VALUE per line)",
-    "url": "URL",
-    "headers": "Headers (KEY: VALUE per line)",
-    "addMcpServer": "Add MCP Server"
   },
   "toolCallBlock": {
     "input": "Input",

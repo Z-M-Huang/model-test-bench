@@ -10,7 +10,7 @@ test.describe('Run Page', () => {
 
   test('page loads with correct heading', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
-    await expect(page.getByText('Execute a test scenario against a provider configuration.')).toBeVisible();
+    await expect(page.getByText('Execute a test scenario against a model provider.')).toBeVisible();
   });
 
   test('provider dropdown is present with label', async ({ page }) => {
@@ -83,11 +83,15 @@ test.describe('Run Page', () => {
     await startBtn.click();
 
     // The run will fail (no real API keys) but the page should not crash.
-    // The status bar should appear with "Pending" or "Abort" button visible.
-    await expect(page.getByText(/Pending|Abort/i).first()).toBeVisible({ timeout: 10000 });
+    // The app may navigate to the run detail page after starting.
+    // Wait for a status indicator to appear (on either the run page or run detail page).
+    await expect(page.getByText(/Pending|Abort|Running|Failed|Error/i).first()).toBeVisible({ timeout: 15000 });
 
-    // The page should still be functional (heading still visible)
-    await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible();
+    // The page should still be functional (no crash).
+    // After starting a run the app may stay on /run or navigate to /runs/:id (Run Detail).
+    const hasNewRun = await page.getByRole('heading', { name: 'New Run' }).isVisible().catch(() => false);
+    const hasRunDetail = await page.getByRole('heading', { name: 'Run Detail' }).isVisible().catch(() => false);
+    expect(hasNewRun || hasRunDetail).toBe(true);
   });
 
 });

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Request, Response } from 'express';
 import type { IStorage } from '../interfaces/storage.js';
 import type { ILogger } from '../interfaces/logger.js';
-import type { Scenario, ScenarioCategory, PermissionMode, ScoringDimension } from '../types/index.js';
+import type { Scenario, ScenarioCategory, ScoringDimension } from '../types/index.js';
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -21,10 +21,6 @@ interface ValidationError {
   readonly field: string;
   readonly message: string;
 }
-
-const VALID_PERMISSION_MODES: readonly PermissionMode[] = [
-  'default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk',
-];
 
 function scenarioMetadata(s: Scenario): Record<string, unknown> {
   return {
@@ -61,19 +57,8 @@ function validateScenarioBody(body: unknown): ValidationError[] {
       message: `category must be one of: ${VALID_CATEGORIES.join(', ')}`,
     });
   }
-  if (Array.isArray(b.claudeMdFiles) && b.claudeMdFiles.length > 2) {
-    errors.push({ field: 'claudeMdFiles', message: 'claudeMdFiles cannot exceed 2 entries' });
-  }
-  if (b.permissionMode !== undefined) {
-    if (!VALID_PERMISSION_MODES.includes(b.permissionMode as PermissionMode)) {
-      errors.push({
-        field: 'permissionMode',
-        message: `permissionMode must be one of: ${VALID_PERMISSION_MODES.join(', ')}`,
-      });
-    }
-  }
-  if (b.allowedTools !== undefined && !Array.isArray(b.allowedTools)) {
-    errors.push({ field: 'allowedTools', message: 'allowedTools must be an array of strings' });
+  if (b.enabledTools !== undefined && !Array.isArray(b.enabledTools)) {
+    errors.push({ field: 'enabledTools', message: 'enabledTools must be an array of strings' });
   }
   if (Array.isArray(b.scoringDimensions) && b.scoringDimensions.length > 0) {
     if (!validateScoringWeights(b.scoringDimensions as ScoringDimension[])) {
@@ -132,16 +117,9 @@ export function createScenarioRoutes(storage: IStorage, logger: ILogger): Router
         id: uuidv4(),
         name: (body.name as string).trim(),
         category: body.category as ScenarioCategory,
-        claudeMdFiles: Array.isArray(body.claudeMdFiles) ? body.claudeMdFiles : [],
-        rules: Array.isArray(body.rules) ? body.rules : [],
-        skills: Array.isArray(body.skills) ? body.skills : [],
-        subagents: Array.isArray(body.subagents) ? body.subagents : [],
-        mcpServers: Array.isArray(body.mcpServers) ? body.mcpServers : [],
-        permissionMode: (body.permissionMode as PermissionMode | undefined) ?? 'default',
-        maxTurns: typeof body.maxTurns === 'number' ? body.maxTurns : undefined,
-        allowedTools: Array.isArray(body.allowedTools) ? body.allowedTools : undefined,
         prompt: (body.prompt as string).trim(),
-        workspaceFiles: Array.isArray(body.workspaceFiles) ? body.workspaceFiles : [],
+        systemPrompt: typeof body.systemPrompt === 'string' ? body.systemPrompt : '',
+        enabledTools: Array.isArray(body.enabledTools) ? body.enabledTools : [],
         expectedAnswer: typeof body.expectedAnswer === 'string' ? body.expectedAnswer : '',
         criticalRequirements: Array.isArray(body.criticalRequirements) ? body.criticalRequirements : [],
         gradingGuidelines: typeof body.gradingGuidelines === 'string' ? body.gradingGuidelines : '',
@@ -176,16 +154,9 @@ export function createScenarioRoutes(storage: IStorage, logger: ILogger): Router
         ...existing,
         name: (body.name as string).trim(),
         category: body.category as ScenarioCategory,
-        claudeMdFiles: Array.isArray(body.claudeMdFiles) ? body.claudeMdFiles : existing.claudeMdFiles,
-        rules: Array.isArray(body.rules) ? body.rules : existing.rules,
-        skills: Array.isArray(body.skills) ? body.skills : existing.skills,
-        subagents: Array.isArray(body.subagents) ? body.subagents : existing.subagents,
-        mcpServers: Array.isArray(body.mcpServers) ? body.mcpServers : existing.mcpServers,
-        permissionMode: (body.permissionMode as PermissionMode | undefined) ?? existing.permissionMode,
-        maxTurns: typeof body.maxTurns === 'number' ? body.maxTurns : existing.maxTurns,
-        allowedTools: Array.isArray(body.allowedTools) ? body.allowedTools : existing.allowedTools,
         prompt: (body.prompt as string).trim(),
-        workspaceFiles: Array.isArray(body.workspaceFiles) ? body.workspaceFiles : existing.workspaceFiles,
+        systemPrompt: typeof body.systemPrompt === 'string' ? body.systemPrompt : existing.systemPrompt,
+        enabledTools: Array.isArray(body.enabledTools) ? body.enabledTools : existing.enabledTools,
         expectedAnswer: typeof body.expectedAnswer === 'string' ? body.expectedAnswer : existing.expectedAnswer,
         criticalRequirements: Array.isArray(body.criticalRequirements)
           ? body.criticalRequirements

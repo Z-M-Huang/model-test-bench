@@ -210,4 +210,58 @@ describe('formatTranscript', () => {
       expect(result.summary.askedClarifyingQuestions).toBe(false);
     });
   });
+
+  describe('AI SDK step messages', () => {
+    function stepMsg(text: string, toolCalls: Record<string, unknown>[] = [], toolResults: Record<string, unknown>[] = []): SDKMessageRecord {
+      return msg({ type: 'step', text, toolCalls, toolResults, usage: { promptTokens: 10, completionTokens: 5 } });
+    }
+
+    it('formats step text as assistant message', () => {
+      const result = formatTranscript([stepMsg('Hello from AI SDK')]);
+      expect(result.text).toContain('[Assistant] Hello from AI SDK');
+    });
+
+    it('formats tool calls from steps', () => {
+      const result = formatTranscript([stepMsg('', [
+        { toolName: 'read_file', args: { path: '/src/app.ts' }, toolCallId: '1' },
+      ])]);
+      expect(result.text).toContain('[Tool Call] read_file:');
+      expect(result.summary.toolCallSequence).toEqual(['read_file']);
+    });
+
+    it('formats tool results from steps', () => {
+      const result = formatTranscript([stepMsg('', [], [
+        { toolName: 'read_file', result: 'file contents here', toolCallId: '1' },
+      ])]);
+      expect(result.text).toContain('[Tool Result] file contents here');
+    });
+
+    it('tracks file access from step tool calls via args', () => {
+      const result = formatTranscript([stepMsg('', [
+        { toolName: 'Read', args: { path: '/src/index.ts' }, toolCallId: '1' },
+      ])]);
+      expect(result.summary.filesRead).toContain('/src/index.ts');
+    });
+
+    it('handles step with text and tool calls together', () => {
+      const result = formatTranscript([stepMsg('Let me read that file.', [
+        { toolName: 'read_file', args: { path: '/a.ts' }, toolCallId: '1' },
+      ], [
+        { toolName: 'read_file', result: 'contents', toolCallId: '1' },
+      ])]);
+      expect(result.text).toContain('[Assistant] Let me read that file.');
+      expect(result.text).toContain('[Tool Call] read_file:');
+      expect(result.text).toContain('[Tool Result] contents');
+    });
+
+    it('skips step with empty text and no tool calls', () => {
+      const result = formatTranscript([stepMsg('')]);
+      expect(result.text).toBe('');
+    });
+
+    it('detects clarifying questions in step text', () => {
+      const result = formatTranscript([stepMsg('What do you want me to do?')]);
+      expect(result.summary.askedClarifyingQuestions).toBe(true);
+    });
+  });
 });

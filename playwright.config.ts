@@ -12,7 +12,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'node dist/bin/ctb.js --no-open --port 3847',
+    command: 'node dist/bin/mtb.js --no-open --port 3847',
     port: 3847,
     reuseExistingServer: true,
     timeout: 10000,

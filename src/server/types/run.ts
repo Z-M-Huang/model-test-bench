@@ -5,7 +5,7 @@
 import type { Provider } from './provider.js';
 import type { Scenario } from './scenario.js';
 
-/** A raw SDK message captured during a run. */
+/** A raw message captured during a run (provider-agnostic). */
 export interface SDKMessageRecord {
   readonly timestamp: string;
   readonly message: Readonly<Record<string, unknown>>;

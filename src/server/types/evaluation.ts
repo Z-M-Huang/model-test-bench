@@ -2,11 +2,12 @@
 // Evaluation Types
 // ---------------------------------------------------------------------------
 
-import type { ProviderConfig } from './provider.js';
-
 /** Configuration for an evaluator agent. */
 export interface EvaluatorConfig {
-  readonly provider: ProviderConfig;
+  readonly providerName: string;
+  readonly model: string;
+  readonly apiKey: string;
+  readonly baseUrl?: string;
   readonly role: string;
 }
 
@@ -43,7 +44,7 @@ export interface IndividualEvaluation {
   readonly reasoning: string;
 }
 
-/** Did the agent follow the instructions in its CLAUDE.md / rules? */
+/** Did the agent follow the instructions in its system prompt? */
 export interface InstructionCompliance {
   readonly followed: readonly string[];
   readonly violated: readonly string[];
@@ -51,27 +52,9 @@ export interface InstructionCompliance {
   readonly overallCompliance: number; // 0-1
 }
 
-/** Report on whether defined skills were invoked. */
-export interface SkillUsageReport {
-  readonly skillName: string;
-  readonly invoked: boolean;
-  readonly invocationCount: number;
-  readonly contextRelevant: boolean;
-}
-
-/** Report on whether defined subagents were invoked. */
-export interface SubagentUsageReport {
-  readonly subagentName: string;
-  readonly invoked: boolean;
-  readonly invocationCount: number;
-  readonly contextRelevant: boolean;
-}
-
-/** Aggregated report on how well the setup itself performed. */
+/** Aggregated report on instruction compliance. */
 export interface SetupComplianceReport {
   readonly instructionCompliance: InstructionCompliance;
-  readonly skillUsage: readonly SkillUsageReport[];
-  readonly subagentUsage: readonly SubagentUsageReport[];
 }
 
 /** Ledger tracking cost/usage per evaluator. */

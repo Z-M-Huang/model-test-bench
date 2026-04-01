@@ -32,7 +32,10 @@ function runSummary(run: Run): Omit<Run, 'messages'> & { messages?: undefined } 
 /** Build EvaluatorConfig[] from reviewer provider snapshots. N-1 as Evaluators, last as Synthesizer. */
 function buildEvaluatorConfigs(reviewerSnapshots: readonly Provider[]): EvaluatorConfig[] {
   return reviewerSnapshots.map((p, idx) => ({
-    provider: p.provider,
+    providerName: p.providerName,
+    model: p.model,
+    apiKey: p.apiKey,
+    baseUrl: p.baseUrl,
     role: idx < reviewerSnapshots.length - 1
       ? (reviewerSnapshots.length > 2 ? `Evaluator ${idx + 1}` : 'Evaluator')
       : 'Synthesizer',
@@ -147,7 +150,7 @@ export function createRunRoutes(
         execute: async () => {
           const callbacks: RunCallbacks = {
             onMessage(message) {
-              broadcastSSE(run.id, 'message', message, sseSubscribers);
+              broadcastSSE(run.id, 'message', { type: 'sdkMessage', ...message }, sseSubscribers);
             },
             onStatusChange(status: RunStatus) {
               const updatedRun: Run = {
@@ -194,8 +197,6 @@ export function createRunRoutes(
                   criticalResults: [],
                   setupCompliance: {
                     instructionCompliance: { followed: [], violated: [], notApplicable: [], overallCompliance: 0 },
-                    skillUsage: [],
-                    subagentUsage: [],
                   },
                   synthesis: { dimensionScores: {}, weightedTotal: 0, confidence: 0, dissenting: [] },
                   ledger: [],

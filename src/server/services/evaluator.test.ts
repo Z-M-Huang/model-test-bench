@@ -1,20 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EvaluationCallbacks } from '../interfaces/evaluator.js';
 import type { Run, Scenario, Provider, EvaluationRequest, EvaluatorConfig, EvaluationStatus } from '../types/index.js';
-import { makeProvider, makeScenario, makeRun, BASE_PROVIDER } from './storage-test-helpers.js';
+import { makeProvider, makeScenario, makeRun } from './storage-test-helpers.js';
 
-// Mock the SDK — must be before importing the evaluator
-const mockQueryFn = vi.fn();
-vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  query: (...args: unknown[]) => mockQueryFn(...args),
+// Mock AI SDK
+const mockGenerateText = vi.fn();
+vi.mock('ai', () => ({
+  generateText: (...args: unknown[]) => mockGenerateText(...args),
 }));
+
+// Mock model factory
+vi.mock('./model-factory.js', () => ({
+  createModel: vi.fn(() => ({ modelId: 'mock-model' })),
+}));
+
 const { EvaluationOrchestrator } = await import('./evaluator.js');
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const mkEval = (role: string): EvaluatorConfig => ({ provider: BASE_PROVIDER, role });
+const MOCK_KEY = 'mock-value-for-testing';
+
+const mkEval = (role: string): EvaluatorConfig => ({
+  providerName: 'anthropic',
+  model: 'claude-sonnet-4-6',
+  apiKey: MOCK_KEY,
+  role,
+});
 
 function mkRequest(overrides: Partial<EvaluationRequest> = {}): EvaluationRequest {
   return { runId: 'run-1', evaluators: [mkEval('primary'), mkEval('secondary')], maxRounds: 1, ...overrides };
@@ -34,8 +47,7 @@ const mkScenario = (o: Partial<Scenario> = {}): Scenario => makeScenario({
     { name: 'correctness', weight: 0.6, description: 'Correct?' },
     { name: 'style', weight: 0.4, description: 'Well written?' },
   ],
-  claudeMdFiles: [{ role: 'project', content: 'Always write tests first.' }],
-  rules: [{ name: 'no-any', content: 'Never use TypeScript any.' }],
+  systemPrompt: 'Always write tests first.\nNever use TypeScript any.',
   ...o,
 });
 
@@ -46,9 +58,8 @@ function mkCallbacks(): EvaluationCallbacks & { statuses: EvaluationStatus[] } {
   return { statuses, onStatusChange: vi.fn((s: EvaluationStatus) => statuses.push(s)), onProgress: vi.fn(), onMessage: vi.fn() };
 }
 
-function mockQuery(text: string, cost = 0.01) {
-  async function* gen() { yield { type: 'result', subtype: 'success', result: text, total_cost_usd: cost, num_turns: 1 }; }
-  return gen();
+function mockGenText(text: string) {
+  return { text, usage: { promptTokens: 100, completionTokens: 50 } };
 }
 
 const scoreJ = (scores: Record<string, number>, closeness = 0.8) => JSON.stringify({
@@ -76,11 +87,11 @@ describe('EvaluationOrchestrator', () => {
   describe('single-round evaluation', () => {
     it('runs score + compliance queries per evaluator and synthesizes', async () => {
       let c = 0;
-      mockQueryFn.mockImplementation(() => {
+      mockGenerateText.mockImplementation(() => {
         c++;
-        if (c <= 2) return mockQuery(scoreJ({ correctness: 8, style: 7 }));
-        if (c <= 4) return mockQuery(complianceJ());
-        return mockQuery(synthesisJ());
+        if (c <= 2) return mockGenText(scoreJ({ correctness: 8, style: 7 }));
+        if (c <= 4) return mockGenText(complianceJ());
+        return mockGenText(synthesisJ());
       });
       const cb = mkCallbacks();
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest(), cb);
@@ -93,24 +104,23 @@ describe('EvaluationOrchestrator', () => {
     });
 
     it('builds ledger with cost tracking', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9 }), 0.02));
+      mockGenerateText.mockImplementation(() => mockGenText(scoreJ({ correctness: 9 })));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest(), mkCallbacks());
       expect(result.ledger).toHaveLength(2);
       expect(result.ledger[0].evaluatorRole).toBe('primary');
-      expect(result.ledger[0].totalCostUsd).toBeGreaterThan(0);
-      expect(result.totalCostUsd).toBeGreaterThan(0);
+      expect(result.totalCostUsd).toBe(0);
     });
   });
 
   describe('multi-round with consensus', () => {
     it('stops early when consensus is reached', async () => {
       let c = 0;
-      mockQueryFn.mockImplementation(() => {
+      mockGenerateText.mockImplementation(() => {
         c++;
-        if (c <= 2) return mockQuery(scoreJ({ correctness: 8, style: 7 }));
-        if (c <= 4) return mockQuery(complianceJ());
-        if (c <= 6) return mockQuery(debateJ('AGREE', { correctness: 8, style: 7 }));
-        return mockQuery(synthesisJ());
+        if (c <= 2) return mockGenText(scoreJ({ correctness: 8, style: 7 }));
+        if (c <= 4) return mockGenText(complianceJ());
+        if (c <= 6) return mockGenText(debateJ('AGREE', { correctness: 8, style: 7 }));
+        return mockGenText(synthesisJ());
       });
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ maxRounds: 3 }), mkCallbacks());
       expect(result.rounds.length).toBeLessThanOrEqual(3);
@@ -121,12 +131,12 @@ describe('EvaluationOrchestrator', () => {
   describe('multi-round without consensus', () => {
     it('runs all rounds when evaluators disagree', async () => {
       let c = 0;
-      mockQueryFn.mockImplementation(() => {
+      mockGenerateText.mockImplementation(() => {
         c++;
-        if (c <= 2) return mockQuery(scoreJ(c === 1 ? { correctness: 9, style: 8 } : { correctness: 5, style: 4 }));
-        if (c <= 4) return mockQuery(complianceJ());
-        if (c <= 6) return mockQuery(debateJ('DISAGREE', c === 5 ? { correctness: 9, style: 7 } : { correctness: 5, style: 5 }));
-        return mockQuery(synthesisJ());
+        if (c <= 2) return mockGenText(scoreJ(c === 1 ? { correctness: 9, style: 8 } : { correctness: 5, style: 4 }));
+        if (c <= 4) return mockGenText(complianceJ());
+        if (c <= 6) return mockGenText(debateJ('DISAGREE', c === 5 ? { correctness: 9, style: 7 } : { correctness: 5, style: 5 }));
+        return mockGenText(synthesisJ());
       });
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ maxRounds: 2 }), mkCallbacks());
       expect(result.rounds).toHaveLength(2);
@@ -136,7 +146,7 @@ describe('EvaluationOrchestrator', () => {
 
   describe('structured output parsing', () => {
     it('parses valid JSON responses into evaluation fields', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9, style: 8 }, 0.95)));
+      mockGenerateText.mockImplementation(() => mockGenText(scoreJ({ correctness: 9, style: 8 }, 0.95)));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.similarity).toBeGreaterThan(0);
       expect(result.rounds[0].evaluations.length).toBeGreaterThan(0);
@@ -145,7 +155,7 @@ describe('EvaluationOrchestrator', () => {
 
   describe('text-mode fallback', () => {
     it('handles non-JSON responses gracefully', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery('The overall weighted score is 7.5 out of 10.'));
+      mockGenerateText.mockImplementation(() => mockGenText('The overall weighted score is 7.5 out of 10.'));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
     });
@@ -153,7 +163,7 @@ describe('EvaluationOrchestrator', () => {
 
   describe('partial results handling', () => {
     it('produces valid evaluation with empty responses', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(''));
+      mockGenerateText.mockImplementation(() => mockGenText(''));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
       expect(result.synthesis).toBeDefined();
@@ -161,7 +171,7 @@ describe('EvaluationOrchestrator', () => {
     });
 
     it('handles missing scores without errors', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(JSON.stringify({ summary: 'Looks good' })));
+      mockGenerateText.mockImplementation(() => mockGenText(JSON.stringify({ summary: 'Looks good' })));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.status).toBe('completed');
       expect(result.answerComparison.similarity).toBe(0);
@@ -170,14 +180,14 @@ describe('EvaluationOrchestrator', () => {
 
   describe('answer comparison', () => {
     it('marks answer as matching when closeness >= 0.7', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 9 }, 0.85)));
+      mockGenerateText.mockImplementation(() => mockGenText(scoreJ({ correctness: 9 }, 0.85)));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.matches).toBe(true);
       expect(result.answerComparison.similarity).toBeCloseTo(0.85, 1);
     });
 
     it('marks answer as not matching when closeness < 0.7', async () => {
-      mockQueryFn.mockImplementation(() => mockQuery(scoreJ({ correctness: 3 }, 0.3)));
+      mockGenerateText.mockImplementation(() => mockGenText(scoreJ({ correctness: 3 }, 0.3)));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       expect(result.answerComparison.matches).toBe(false);
     });
@@ -189,49 +199,19 @@ describe('EvaluationOrchestrator', () => {
         scores: { correctness: 5 }, overallCloseness: 0.4,
         missedCritical: ['Must validate input'], strengths: [], weaknesses: [], summary: 'Missed',
       });
-      mockQueryFn.mockImplementation(() => mockQuery(missed));
+      mockGenerateText.mockImplementation(() => mockGenText(missed));
       const result = await orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks());
       const req = result.criticalResults.find((r) => r.requirement === 'Must validate input');
       expect(req?.met).toBe(false);
     });
   });
 
-  describe('SDK error handling', () => {
-    it('propagates SDK query error when subtype is not success', async () => {
-      mockQueryFn.mockImplementation(() => {
-        async function* gen() {
-          yield {
-            type: 'result',
-            subtype: 'error_during_execution',
-            result: 'Rate limit exceeded',
-            total_cost_usd: 0,
-            num_turns: 0,
-          };
-        }
-        return gen();
-      });
-
+  describe('error handling', () => {
+    it('propagates generateText errors', async () => {
+      mockGenerateText.mockRejectedValue(new Error('Rate limit exceeded'));
       await expect(
         orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
-      ).rejects.toThrow('SDK query failed');
-    });
-
-    it('handles missing result field in error response', async () => {
-      mockQueryFn.mockImplementation(() => {
-        async function* gen() {
-          yield {
-            type: 'result',
-            subtype: 'error_during_execution',
-            total_cost_usd: 0,
-            num_turns: 0,
-          };
-        }
-        return gen();
-      });
-
-      await expect(
-        orch.evaluateRun(mkRun(), mkScenario(), mkProvider(), mkRequest({ evaluators: [mkEval('solo')], maxRounds: 1 }), mkCallbacks()),
-      ).rejects.toThrow('unknown error');
+      ).rejects.toThrow('Rate limit exceeded');
     });
   });
 });

@@ -29,7 +29,7 @@ export class JsonFileStorage implements IStorage {
   };
 
   constructor(basePath?: string, fsAdapter?: FsAdapter) {
-    this.basePath = basePath ?? path.join(process.cwd(), '.claude-test-bench');
+    this.basePath = basePath ?? path.join(process.cwd(), '.model-test-bench');
     this.fs = fsAdapter ?? defaultFs;
 
     this.entities = {
@@ -38,8 +38,8 @@ export class JsonFileStorage implements IStorage {
         sensitive: true,
         matchesFilter: (s: Provider, f?: ProviderFilter) => {
           if (!f) return true;
-          if (f.provider && s.provider.kind !== f.provider) return false;
-          if (f.model && s.provider.model !== f.model) return false;
+          if (f.provider && s.providerName !== f.provider) return false;
+          if (f.model && s.model !== f.model) return false;
           return true;
         },
       },

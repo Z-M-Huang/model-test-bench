@@ -3,5 +3,5 @@ dist/
 coverage/
 .env
 *.tgz
-.claude-test-bench/
+.model-test-bench/
 test-results/
